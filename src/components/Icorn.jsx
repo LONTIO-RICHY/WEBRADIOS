@@ -1,0 +1,15 @@
+
+ 
+function Icorn() {
+  return (
+    <div>
+    
+<svg  xmlns="http://www.w3.org/2000/svg" width="64" height="64"  
+fill="#c60d0d" viewBox="0 0 24 24" >
+<path d="M12 5c-3.86 0-7 3.14-7 7s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7m0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5"></path><path d="M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6"></path>
+</svg>
+    </div>
+  );
+}
+
+export default Icorn;
