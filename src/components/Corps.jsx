@@ -1,11 +1,15 @@
  import { Search, SparklesAlt } from "@boxicons/react";
+import Listederoulante from "./Listederoulante";
 
  export const Corps =  ()=>{
     return(
         <p>
+           <span className="relative top-4 left-5"><Listederoulante /></span>
+            
       <div className="h-screen flex flex-col justify-center items-center">
+       
         <h2 className="bg-pink-500 flex p-1 rounded-lg m-3"><span className="  mr-2"><SparklesAlt /></span> plus de 200 chaines disponibles </h2>
-        <h1 className="  text-4xl font-semibold m-3 ">Ecouter vos emissions favorites en direct</h1>
+        <h1 className="  text-4xl font-semibold m-3 "> Ecouter vos emissions favorites en direct</h1>
         <p className="text-2xl text-gray-700 m-5 w-1/2">Decouvrez des centaines des webradios thématiques et ne manquez plus jamais vos programes préférés </p>
       <div className="relative hidden md:flex items-center justify-center gap-3">
                 <i className=" absolute left-3 text-2xl text-gray-500 "> <Search /> </i>

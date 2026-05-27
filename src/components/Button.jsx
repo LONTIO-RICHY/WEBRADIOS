@@ -18,9 +18,10 @@ export const Button = ()=>{
                 
               
                 <ul className="hidden xl:flex items-center gap-10 font-semibold text-base">
-                   <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link to="/"> Chianes</Link></li>
+                   <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link to="/"> Accueil</Link></li>    
+                   <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link to="Chaines"> Chianes</Link></li>
                    <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link to="Emission">Emission</Link></li>
-                   <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link>Catégories</Link></li>      
+                   <li className="p-0 hover:bg-sky-400 hover:text-white rounded-md transition-all cursor-pointer"><Link to="Categorie">Catégories</Link></li>      
                 </ul>
 
                 <div className="relative hidden md:flex items-center justify-center gap-3">

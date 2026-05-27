@@ -9,6 +9,7 @@ import { Corps } from "./components/Corps";
 import { Emission } from "./components/Emission";
 import ChainesGauche from "./components/ChainesGauche";
 import ChainesDroite from "./components/ChainesDroite";
+import { Categorie } from "./components/Categorie";
 
 
 
@@ -16,7 +17,8 @@ import ChainesDroite from "./components/ChainesDroite";
 
 function App() {
   return (
-    <div className="w-full h-screen absolute bg-gradient-to-r from-red-200">      
+    <div className="w-full h-screen absolute bg-gradient-to-r from-red-200">    
+          
         <Button />
       {/* <Liens /> */}
        <Routes>
@@ -28,7 +30,7 @@ function App() {
             <Route path="chaines/:id" element={<Chaines />} />
             <Route path="*"            element={<ChainesDroite />} />
             <Route path="/emissions/:id" element={<Emission />} />
-            <Route path="/emissions"     element={<Emission />} />
+            <Route path="Categorie"  element={<Categorie/>} />
             
       </Routes> 
       
