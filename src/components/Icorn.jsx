@@ -1,15 +1,28 @@
 
- 
-function Icorn() {
+export default function Icorn() {
   return (
-    <div>
-    
-<svg  xmlns="http://www.w3.org/2000/svg" width="64" height="64"  
-fill="#c60d0d" viewBox="0 0 24 24" >
-<path d="M12 5c-3.86 0-7 3.14-7 7s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7m0 12c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5"></path><path d="M12 9a3 3 0 1 0 0 6 3 3 0 1 0 0-6"></path>
-</svg>
+    <div className="flex items-center gap-3">
+      {/* Icône */}
+      <div className="relative flex items-center justify-center w-14 h-14">
+        <div className="absolute w-14 h-14 rounded-full bg-gradient-to-br from-red-700 via-red-500 to-pink-500 shadow-lg"></div>
+
+        <div className="absolute w-9 h-9 rounded-full bg-white flex items-center justify-center">
+          <div className="w-4 h-4 rounded-full bg-gradient-to-br from-red-700 via-red-500 to-pink-500"></div>
+        </div>
+      </div>
+
+      {/* Texte */}
+      <div className="flex flex-col">
+        <span className="text-3xl font-extrabold tracking-tight">
+          <span className="bg-gradient-to-r from-red-700 via-red-500 to-pink-500 bg-clip-text text-transparent">
+            RADIO
+          </span>
+        </span>
+
+        <span className="text-xl font-bold text-gray-900 tracking-widest">
+          RICKESS
+        </span>
+      </div>
     </div>
   );
 }
-
-export default Icorn;

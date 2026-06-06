@@ -10,7 +10,7 @@ export default function ChainesGauche() {
   const { id } = useParams(); // id de la chaîne active dans l'URL
 
   return (
-    <div className="flex flex-col h-full border-r border-gray-200 bg-white">
+    <div className="flex flex-col h-screen bg-white border-r border-gray-200">
 
       {/* Titre */}
       <h2 className="px-4 py-3 text-sm font-bold text-gray-800 border-b border-gray-100 flex m-auto">
@@ -23,7 +23,7 @@ fill="currentColor" viewBox="0 0 24 24" >
       </h2>
 
       {/* Barre de recherche → connecter à GET /api/chaines?q=... */}
-      <div className="px-3 py-2 flex relative">
+      <div className="px-3 py-2 flex relative ">
         <span className="top-4 left-2 absolute "><Search /></span>
         <input
           placeholder="  Rechercher une chaîne..."
@@ -40,14 +40,14 @@ fill="currentColor" viewBox="0 0 24 24" >
             // Link vers /chaines/:id → React Router met à jour l'URL
             // ChainesDroite lit cet id avec useParams() et affiche les détails
             <Link to={`/Chaines/${c.id}`} key={c.id}>
-              <li className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition
+              <li className={`flex items-center  gap-3 p-3 rounded-xl cursor-pointer transition
                 ${estActif
                   ? "bg-red-50 border-2 border-red-400"       // style actif
                   : "border border-gray-100 hover:bg-gray-50"  // style normal
                 }`}>
 
                 {/* Avatar coloré */}
-                <div className={`${c.couleur} w-10 h-10 rounded-full flex items-center
+                <div className={`${c.couleur} w-10  h-full rounded-full flex flex-col  items-center
                   justify-center text-white text-xs font-bold flex-shrink-0`}>
                   {c.initials}
                 </div>

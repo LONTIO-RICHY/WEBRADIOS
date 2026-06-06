@@ -20,7 +20,7 @@ export default function ChainesDroite() {
   );
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-white">
+    <div className="flex flex-col h-screen overflow-y-auto bg-white">
 
       {/* ── Bannière hero ── */}
       <div className="bg-gray-900 p-6 flex items-center gap-5">
