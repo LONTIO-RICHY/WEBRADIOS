@@ -11,21 +11,28 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
 
-    # Relation : Un utilisateur peut avoir plusieurs émissions
+    # Relations
     emissions = relationship("Emission", back_populates="creator")
+    tracks = relationship("Track", back_populates="owner") # Ajouté : les musiques de l'utilisateur
 
 
 class Emission(Base):
     __tablename__ = "emissions"
-
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(100), nullable=False)
     description = Column(String(255))
-    is_live = Column(Boolean, default=False) # True si l'utilisateur diffuse actuellement
-    
-    # Clé étrangère pour lier l'émission à son créateur (User)
+    is_live = Column(Boolean, default=False)
     creator_id = Column(Integer, ForeignKey("users.id"))
-
-    # Relation inverse
     creator = relationship("User", back_populates="emissions")
 
+
+# NOUVELLE TABLE : Pour stocker les fichiers MP3 sur le serveur
+class Track(Base):
+    __tablename__ = "tracks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(100), nullable=False)
+    file_path = Column(String(255), nullable=False) # Chemin du fichier sur le serveur (ex: uploads/music1.mp3)
+    
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="tracks")

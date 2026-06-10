@@ -43,5 +43,14 @@ class EmissionResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class TrackResponse(BaseModel):
+    id: int
+    title: str
+    file_path: str
+    owner_id: int
+
+    class Config:
+        from_attributes = True
+
 
 

@@ -1,5 +1,6 @@
 import { Button } from "./components/Button";
 import { react } from "react";
+//uvicorn main:app --reload
 
 // import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {  Routes,Route,BrowserRouter} from "react-router-dom";
@@ -49,7 +50,7 @@ function App() {
       
         <Route path="*" element={<Corps />} />
       </Routes>
-    <div className="fixed bottom-0 left-0 right-0 w-full z-50  bg-red-400 h-24">
+    <div className=" bottom-5 left-5 right-5 w-full z-50  bg-red-400 h-24">
       <Player/>
     </div>
        

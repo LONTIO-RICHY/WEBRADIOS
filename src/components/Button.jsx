@@ -16,7 +16,7 @@ const tester = async () => {
         const [isMenuOpen, setIsMenuOpen] = useState(false)
     return (   
         <>
-           <header class="flex justify-between items-center text-black py-6 px-8 md:px-32 bg-orange-100 drop-shadow-md">
+           <header className="flex justify-between items-center text-black py-6 px-8 md:px-32 bg-orange-100 drop-shadow-md">
                 <div className="flex">
                          <h2 className="flex font-extrabold text-2xl"><span className="absolute top-6 left-0 animate-bounce"><Icorn /></span> </h2>
                 </div>
