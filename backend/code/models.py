@@ -53,6 +53,8 @@ class Emission(Base):
     channel = relationship("Channel", back_populates="emissions")
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     audio_path = Column(String(255), nullable=True)
+    stream_url = Column(String(500), nullable=True) # Nouveau : URL externe pour le stream
+    image_url = Column(String(500), nullable=True)  # Nouveau : Miniature de l'émission
     category = relationship("Category", back_populates="emissions")
     comments = relationship("Comment", back_populates="emission")
 
@@ -75,6 +77,7 @@ class Channel(Base):
     auth_word = Column(String(100), default="qwerty237")
     owner_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    region = Column(String(100), nullable=True) # Nouveau : Région du Cameroun
     last_broadcast_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

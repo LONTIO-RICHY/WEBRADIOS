@@ -38,6 +38,8 @@ class CategoryCreate(CategoryBase):
 
 class CategoryResponse(CategoryBase):
     id: int
+    channels_count: int = 0
+    emissions_count: int = 0
 
     class Config:
         from_attributes = True
@@ -50,11 +52,13 @@ class ChannelCreate(BaseModel):
     payment_method: str
     auth_word: str
     category_id: int | None = None
+    region: str | None = None
 
 class ChannelUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
     category_id: int | None = None
+    region: str | None = None
 
 class ChannelResponse(BaseModel):
     id: int
@@ -65,6 +69,7 @@ class ChannelResponse(BaseModel):
     payment_method: str
     owner_id: int
     category_id: int | None = None
+    region: str | None = None
     last_broadcast_at: datetime | None = None
 
     class Config:
@@ -77,6 +82,8 @@ class EmissionCreate(BaseModel):
     channel_id: int
     category_id: int | None = None
     audio_path: str | None = None
+    stream_url: str | None = None
+    image_url: str | None = None
 
 class EmissionResponse(BaseModel):
     id: int
@@ -87,6 +94,9 @@ class EmissionResponse(BaseModel):
     channel_id: int | None = None
     category_id: int | None = None
     audio_path: str | None = None
+    stream_url: str | None = None
+    image_url: str | None = None
+    channel_name: str | None = None
 
     class Config:
         from_attributes = True

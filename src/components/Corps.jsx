@@ -1,5 +1,5 @@
  import { useState, useEffect } from "react";
- import { Search, Sparkles, Radio, Phone, User, CreditCard, Lock, Play } from "lucide-react";
+ import { Search, Sparkles, Radio, Phone, User, CreditCard, Lock, Play, Palette } from "lucide-react";
  import Listederoulante from "./Listederoulante";
  import { useAuth } from "../context/AuthContext";
  import { useAudio } from "../context/AudioContext";
@@ -16,19 +16,20 @@
      const [searchResults, setSearchResults] = useState({ channels: [], emissions: [] });
      const [isSearching, setIsLiveSearching] = useState(false);
 
-     // Charger une chaîne par défaut pour le player global si besoin
+     // Charger une chaîne par défaut
      useEffect(() => {
-        const loadDefault = async () => {
+        const loadInitialData = async () => {
             try {
+                // 1. Charger les chaînes pour le player
                 const res = await api.get("/api/channels");
                 if (res.data.length > 0) {
-                    // On ne joue pas auto, mais on informe le player
-                    // du "canal en vedette" pour éviter "Rien à lire"
                     setCurrentChannel(res.data[0]);
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("Erreur chargement données initiales", e);
+            }
         };
-        loadDefault();
+        loadInitialData();
      }, [setCurrentChannel]);
 
      const [formData, setFormData] = useState({

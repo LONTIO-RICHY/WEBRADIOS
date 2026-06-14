@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../Api";
-import { Users, Radio, Trash2, UserPlus, UserMinus, BarChart3, Settings, Play, Eraser, Eye, X, Calendar, Clock, Music, Search } from "lucide-react";
+import { Users, Radio, Trash2, UserPlus, UserMinus, BarChart3, Settings, Play, Eraser, Eye, X, Calendar, Clock, Music, Search, MapPin } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -19,6 +19,8 @@ const AdminDashboard = () => {
     const [newSlot, setNewSlot] = useState({ channel_id: "", date: "", start: "", end: "", track_info: "" });
     const [newCat, setNewCat] = useState({ name: "", description: "", icon: "bx-radio" });
     const [activeTab, setActiveTab] = useState("stats");
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [showUnclassifiedOnly, setShowUnclassifiedOnly] = useState(false);
 
     // États pour la recherche
     const [searchUser, setSearchUser] = useState("");
@@ -28,6 +30,10 @@ const AdminDashboard = () => {
     // État pour la gestion du contenu d'une chaîne spécifique
     const [viewChannelContent, setViewChannelContent] = useState(null);
     const [channelEmissions, setChannelEmissions] = useState([]);
+
+    const CAMEROON_REGIONS = [
+        "Adamaoua", "Centre", "Est", "Extrême-Nord", "Littoral", "Nord", "Nord-Ouest", "Ouest", "Sud", "Sud-Ouest"
+    ];
 
     useEffect(() => {
         if (!currentUser?.is_admin) {
@@ -78,7 +84,7 @@ const AdminDashboard = () => {
 
     const fetchCategories = async () => {
         try {
-            const res = await api.get("/api/categories");
+            const res = await api.get("/api/categories", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setCategories(res.data);
         } catch (err) { console.error(err); }
     };
@@ -191,6 +197,55 @@ const AdminDashboard = () => {
             fetchStats();
             toast.success("Chaîne supprimée");
         } catch (err) { toast.error("Erreur suppression"); }
+    };
+
+    const handleSyncRadioBrowser = async () => {
+        setIsSyncing(true);
+        const loadToast = toast.loading("Synchronisation avec Radio-Browser en cours...");
+        try {
+            const res = await api.post("/api/admin/sync-radiobrowser", {}, { 
+                headers: { Authorization: `Bearer ${currentUser.token}` } 
+            });
+            toast.dismiss(loadToast);
+            toast.success(`${res.data.message} : ${res.data.imported} importées, ${res.data.updated} déjà présentes.`);
+            fetchChannels();
+            fetchStats();
+        } catch (err) {
+            toast.dismiss(loadToast);
+            toast.error("Erreur lors de la synchronisation");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleAutoAssignRegions = async () => {
+        setIsSyncing(true);
+        const loadToast = toast.loading("Auto-assignation des régions en cours...");
+        try {
+            const res = await api.post("/api/admin/auto-assigner-regions", {}, { 
+                headers: { Authorization: `Bearer ${currentUser.token}` } 
+            });
+            toast.dismiss(loadToast);
+            toast.success(`${res.data.message} : ${res.data.assigned} régions assignées.`);
+            fetchChannels();
+        } catch (err) {
+            toast.dismiss(loadToast);
+            toast.error("Erreur lors de l'auto-assignation");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const updateChannelField = async (channelId, field, value) => {
+        try {
+            await api.patch(`/api/admin/channels/${channelId}`, { [field]: value || null }, {
+                headers: { Authorization: `Bearer ${currentUser.token}` }
+            });
+            setChannels(prev => prev.map(c => c.id === channelId ? { ...c, [field]: value } : c));
+            toast.success("Mise à jour effectuée", { duration: 1000 });
+        } catch (err) {
+            toast.error("Erreur mise à jour");
+        }
     };
 
     const deleteEmission = async (id, fromChannelView = false) => {
@@ -320,7 +375,7 @@ const AdminDashboard = () => {
                             <div className="bg-[#FFF3EC] p-8 rounded-[2rem] border border-orange-100 shadow-xl group">
                                 <p className="text-[#D4480A] font-black uppercase text-[10px] tracking-widest mb-2">Engagement</p>
                                 <p className="text-5xl font-black text-[#1A1A18] tracking-tighter">{stats.chart_data?.reduce((acc, curr) => acc + (curr.creators || 0), 0) || 0}</p>
-                                <p className="text-[#D4480A]/60 text-xs font-bold mt-2 italic">Nouveaux créateurs (30j)</p>
+                                <p className="text-[#D4480A]/60 text-xs font-bold mt-2 italic">Nouveaux créateurs (28j)</p>
                             </div>
                         </div>
 
@@ -329,9 +384,9 @@ const AdminDashboard = () => {
                             <div className="bg-white p-8 rounded-[2.5rem] border border-orange-50 shadow-2xl">
                                 <div className="flex justify-between items-center mb-8">
                                     <h3 className="text-lg font-black text-[#1A1A18] uppercase tracking-tighter">Courbe de croissance des Utilisateurs</h3>
-                                    <span className="text-[10px] font-black bg-[#F5F2EE] px-3 py-1 rounded-full text-slate-400 uppercase">30 derniers jours</span>
+                                    <span className="text-[10px] font-black bg-[#F5F2EE] px-3 py-1 rounded-full text-slate-400 uppercase">28 derniers jours</span>
                                 </div>
-                                <div className="h-[300px] w-full">
+                                <div className="h-[300px] min-h-[300px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={stats.chart_data}>
                                             <defs>
@@ -356,7 +411,7 @@ const AdminDashboard = () => {
                                         <h3 className="text-lg font-black text-[#1A1A18] uppercase tracking-tighter">Création de Chaînes</h3>
                                         <Radio size={16} className="text-[#D4480A]" />
                                     </div>
-                                    <div className="h-[250px] w-full">
+                                    <div className="h-[250px] min-h-[250px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={stats.chart_data}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F2EE" />
@@ -373,7 +428,7 @@ const AdminDashboard = () => {
                                         <h3 className="text-lg font-black text-[#1A1A18] uppercase tracking-tighter">Nouveaux Créateurs</h3>
                                         <Users size={16} className="text-[#D4480A]" />
                                     </div>
-                                    <div className="h-[250px] w-full">
+                                    <div className="h-[250px] min-h-[250px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={stats.chart_data}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F2EE" />
@@ -454,53 +509,138 @@ const AdminDashboard = () => {
 
                 {!viewChannelContent && activeTab === "channels" && (
                     <div className="space-y-6">
-                        <div className="flex bg-white p-4 rounded-3xl border border-orange-50 shadow-sm items-center gap-4">
-                            <Search className="text-slate-400" size={20} />
-                            <input 
-                                type="text" 
-                                placeholder="Rechercher une chaîne ou un créateur..." 
-                                className="flex-1 bg-transparent outline-none font-bold text-sm"
-                                value={searchChannel}
-                                onChange={(e) => setSearchChannel(e.target.value)}
-                            />
+                        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <div className="flex bg-white p-4 rounded-3xl border border-orange-50 shadow-sm items-center gap-4 flex-1 w-full">
+                                <Search className="text-slate-400" size={20} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Rechercher une chaîne ou un créateur..." 
+                                    className="flex-1 bg-transparent outline-none font-bold text-sm"
+                                    value={searchChannel}
+                                    onChange={(e) => setSearchChannel(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex gap-4 w-full md:w-auto">
+                                <button
+                                    onClick={handleAutoAssignRegions}
+                                    disabled={isSyncing}
+                                    className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                                        isSyncing ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-[#FFF3EC] text-[#D4480A] hover:bg-[#D4480A] hover:text-white shadow-lg shadow-orange-100 border border-orange-100"
+                                    }`}
+                                    title="Tente de deviner la région via le nom de la chaîne"
+                                >
+                                    <MapPin size={16} />
+                                    Auto-Régions
+                                </button>
+                                <button
+                                    onClick={handleSyncRadioBrowser}
+                                    disabled={isSyncing}
+                                    className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                                        isSyncing ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-[#1A1A18] text-white hover:bg-[#D4480A] shadow-lg shadow-orange-100"
+                                    }`}
+                                >
+                                    <Radio size={16} className={isSyncing ? "animate-spin" : ""} />
+                                    {isSyncing ? "Sync en cours..." : "Sync Radio-Browser"}
+                                </button>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-                            {channels.filter(c => 
-                                c.name.toLowerCase().includes(searchChannel.toLowerCase()) || 
-                                c.owner_name.toLowerCase().includes(searchChannel.toLowerCase())
-                            ).length > 0 ? (
-                                channels.filter(c => 
-                                    c.name.toLowerCase().includes(searchChannel.toLowerCase()) || 
-                                    c.owner_name.toLowerCase().includes(searchChannel.toLowerCase())
-                                ).map(c => (
-                                    <div key={c.id} className="bg-white p-8 rounded-[2.5rem] border border-orange-50 shadow-xl hover:border-[#D4480A]/20 transition-all group">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="p-3 bg-[#FFF3EC] rounded-2xl text-[#D4480A] group-hover:bg-[#D4480A] group-hover:text-white transition-all">
-                                                <Radio size={28} />
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={() => openChannelContent(c)} title="Gérer le contenu" className="p-2 bg-slate-50 text-slate-400 hover:bg-[#1A1A18] hover:text-white rounded-xl transition-all">
-                                                    <Eye size={18} />
-                                                </button>
-                                                <button onClick={() => deleteChannel(c.id)} title="Supprimer la chaîne" className="p-2 text-slate-300 hover:text-[#C0392B] transition-colors">
-                                                    <Trash2 size={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <h3 className="text-xl font-black text-[#1A1A18] mb-1 uppercase tracking-tighter">{c.name}</h3>
-                                        <p className="text-xs font-bold text-slate-400 italic mb-6">Propriétaire : {c.owner_name}</p>
-                                        <div className="flex justify-between items-center pt-4 border-t border-slate-50">
-                                            <span className="text-[10px] font-black text-[#D4480A] uppercase tracking-widest">{c.payment_method}</span>
-                                            <span className="text-[10px] font-black text-slate-900 bg-[#F5F2EE] px-2 py-1 rounded-lg uppercase tracking-widest">{c.amount} FCFA</span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-full py-20 bg-white rounded-[2.5rem] text-center border border-dashed border-slate-200">
-                                    <Radio size={48} className="mx-auto mb-4 text-slate-200" />
-                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Aucune chaîne ne correspond à votre recherche</p>
-                                </div>
-                            )}
+
+                        <div className="flex items-center gap-3 bg-white/50 p-4 rounded-2xl border border-dashed border-orange-200">
+                            <input 
+                                type="checkbox" 
+                                id="unclassified"
+                                className="w-5 h-5 accent-[#D4480A]"
+                                checked={showUnclassifiedOnly}
+                                onChange={(e) => setShowUnclassifiedOnly(e.target.checked)}
+                            />
+                            <label htmlFor="unclassified" className="text-xs font-black text-slate-500 uppercase tracking-widest cursor-pointer select-none">
+                                Afficher uniquement les chaînes non classées
+                            </label>
+                        </div>
+
+                        <div className="bg-white rounded-[2.5rem] border border-orange-50 shadow-2xl animate-in slide-in-from-bottom-4 duration-500 overflow-x-auto">
+                            <table className="w-full text-left min-w-[1000px]">
+                                <thead className="bg-[#F5F2EE] text-slate-400 uppercase text-[10px] font-black tracking-widest border-b border-orange-50">
+                                    <tr>
+                                        <th className="p-6">Chaîne</th>
+                                        <th className="p-6">Propriétaire</th>
+                                        <th className="p-6">Catégorie</th>
+                                        <th className="p-6">Statut</th>
+                                        <th className="p-6">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {channels.filter(c => {
+                                        const matchesSearch = (c.name || "").toLowerCase().includes(searchChannel.toLowerCase()) || 
+                                                            (c.owner_name || "").toLowerCase().includes(searchChannel.toLowerCase());
+                                        const isUnclassified = !c.category_id || !c.region;
+                                        return matchesSearch && (!showUnclassifiedOnly || isUnclassified);
+                                    }).length > 0 ? (
+                                        channels.filter(c => {
+                                            const matchesSearch = (c.name || "").toLowerCase().includes(searchChannel.toLowerCase()) || 
+                                                                (c.owner_name || "").toLowerCase().includes(searchChannel.toLowerCase());
+                                            const isUnclassified = !c.category_id || !c.region;
+                                            return matchesSearch && (!showUnclassifiedOnly || isUnclassified);
+                                        }).map(c => (
+                                            <tr key={c.id} className="hover:bg-slate-50 transition-colors group">
+                                                <td className="p-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-[#FFF3EC] rounded-xl flex items-center justify-center text-[#D4480A] font-black">
+                                                            {(c.name || "R").charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <p className="font-black text-[#1A1A18] uppercase tracking-tight text-sm">{c.name}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6">
+                                                    <p className="text-xs font-bold text-slate-500">{c.owner_name}</p>
+                                                    <p className="text-[10px] text-slate-400 italic">{c.payment_method}</p>
+                                                </td>
+                                                <td className="p-6">
+                                                    <select 
+                                                        className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 outline-none transition-all w-full
+                                                            ${!c.category_id ? "border-orange-200 bg-orange-50 text-[#D4480A]" : "border-slate-100 bg-white text-slate-700 focus:border-[#D4480A]"}`}
+                                                        value={c.category_id || ""}
+                                                        onChange={(e) => updateChannelField(c.id, "category_id", e.target.value)}
+                                                    >
+                                                        <option value="">— Non classée —</option>
+                                                        {categories.map(cat => (
+                                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="p-6">
+                                                    {(!c.category_id || !c.region) ? (
+                                                        <span className="flex items-center gap-1 text-[9px] font-black text-orange-600 bg-orange-100 px-2 py-1 rounded-full uppercase animate-pulse">
+                                                            ⚠ Incomplet
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[9px] font-black text-green-600 bg-green-100 px-2 py-1 rounded-full uppercase">
+                                                            ✓ Classée
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="p-6">
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => openChannelContent(c)} title="Gérer et Classer" className="p-2 bg-[#1A1A18] text-white rounded-xl transition-all shadow-md hover:scale-105">
+                                                            <Eye size={16} />
+                                                        </button>
+                                                        <button onClick={() => deleteChannel(c.id)} className="p-2 text-slate-300 hover:text-[#C0392B] transition-colors">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="p-20 text-center">
+                                                <Radio size={48} className="mx-auto mb-4 text-slate-200" />
+                                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Aucune chaîne ne correspond à votre recherche</p>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 )}

@@ -18,26 +18,193 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# --- CONFIGURATION ET CONSTANTES ---
 UPLOAD_DIR = "uploads"
+FENETRE_DISPONIBILITE_JOURS = 28
+
+CITY_TO_REGION = {
+    "Adamaoua": ["Ngaoundéré", "Meiganga", "Tibati"],
+    "Centre": ["Yaoundé", "Mbalmayo", "Obala", "Mfou", "Soa"],
+    "Est": ["Bertoua", "Abong-Mbang", "Batouri"],
+    "Extrême-Nord": ["Maroua", "Kousséri", "Mokolo", "Yagoua"],
+    "Littoral": ["Douala", "Nkongsamba", "Edéa"],
+    "Nord": ["Garoua", "Guider", "Poli"],
+    "Nord-Ouest": ["Bamenda", "Kumbo", "Wum", "Nkambé"],
+    "Ouest": ["Bafoussam", "Dschang", "Foumban", "Bafang", "Mbouda"],
+    "Sud": ["Ebolowa", "Kribi", "Sangmélima"],
+    "Sud-Ouest": ["Buea", "Limbe", "Kumba", "Mamfe"]
+}
+
+CATEGORY_KEYWORDS = {
+    "Musique": ["music", "musique", "chanson", "hits", "pop", "rock", "jazz", "rnb", "hip hop", "afro", "makossa", "bikutsi", "afrobeats", "rumba"],
+    "Sport": ["sport", "football", "foot", "match", "soccer", "basketball", "tennis", "rugby", "athétisme"],
+    "Environnement": ["nature", "ecology", "environnement", "écologie", "vert", "green", "climat", "forest", "forêt", "agriculture", "ferme", "climat"],
+    "Éducation": ["edu", "education", "école", "school", "savoir", "science", "histoire", "history", "learning", "université", "étudiant"],
+    "Actualités": ["news", "infos", "actualité", "journal", "information", "politique", "radio-news", "debate", "débat", "monde", "world"],
+    "Culture": [
+        "culture", "art", "tradition", "langue", "patrimoine", "cinéma", "théâtre", "folk", "traditional", "community", 
+        "communautaire", "spirituel", "religieux", "gospel", "histoire", "history", "cuisine", "mets", "plat", "food",
+        "habit", "vêtement", "accoutrement", "coutume", "racines", "roots", "village", "ancestral", "oral"
+    ]
+}
+
+def detect_region(station_name, state_field=None, tags_field=None):
+    # 1. Vérifier le champ 'state' (le plus fiable)
+    if state_field:
+        st = state_field.lower()
+        for region, cities in CITY_TO_REGION.items():
+            if region.lower() in st: return region
+            for city in cities:
+                if city.lower() in st: return region
+
+    # 2. Vérifier le nom de la station
+    name = (station_name or "").lower()
+    for region, cities in CITY_TO_REGION.items():
+        if region.lower() in name: return region
+        for city in cities:
+            if city.lower() in name: return region
+
+    # 3. Vérifier les tags
+    if tags_field:
+        tags = tags_field.lower()
+        for region, cities in CITY_TO_REGION.items():
+            if region.lower() in tags: return region
+            for city in cities:
+                if city.lower() in tags: return region
+
+    return None
+
+def detect_category_id(station_name, tags_field, db: Session):
+    combined = f"{station_name} {tags_field or ''}".lower()
+    for cat_name, keywords in CATEGORY_KEYWORDS.items():
+        for kw in keywords:
+            if kw in combined:
+                cat = db.query(models.Category).filter(models.Category.name == cat_name).first()
+                if cat: return cat.id
+    return None
+
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# --- FONCTION DE SYNC REUTILISABLE ---
+async def perform_sync_logic(db: Session, admin_id: int):
+    import httpx
+    print("LOG: Démarrage de la synchronisation automatique Radio-Browser...")
+    
+    cam_url = "https://de1.api.radio-browser.info/json/stations/bycountry/Cameroon"
+    africa_url = "https://de1.api.radio-browser.info/json/stations/bytag/africa?limit=100&order=votes&reverse=true"
+    sport_africa_url = "https://de1.api.radio-browser.info/json/stations/bytag/sport?limit=30&order=votes&reverse=true"
+    culture_africa_url = "https://de1.api.radio-browser.info/json/stations/bytag/culture?limit=50&order=votes&reverse=true"
+    
+    stations = []
+    try:
+        async with httpx.AsyncClient() as client:
+            r_cam = await client.get(cam_url, timeout=20)
+            if r_cam.status_code == 200: stations.extend(r_cam.json())
+            r_africa = await client.get(africa_url, timeout=20)
+            if r_africa.status_code == 200: stations.extend(r_africa.json())
+            r_sport = await client.get(sport_africa_url, timeout=20)
+            if r_sport.status_code == 200: stations.extend(r_sport.json())
+            r_culture = await client.get(culture_africa_url, timeout=20)
+            if r_culture.status_code == 200: stations.extend(r_culture.json())
+    except Exception as e:
+        print(f"ERROR SYNC: {e}")
+        return
+
+    AFRICAN_COUNTRIES = [
+        "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde", "Cameroon", 
+        "Central African Republic", "Chad", "Comoros", "Congo", "Cote d'Ivoire", "Djibouti", "Egypt", 
+        "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", 
+        "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", 
+        "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", 
+        "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", 
+        "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe",
+        "Ivory Coast", "United Republic Of Tanzania", "The Democratic Republic Of The Congo"
+    ]
+
+    imported = 0
+    for s in stations:
+        name = s.get("name")
+        stream_url = s.get("url_resolved")
+        tags = s.get("tags")
+        country = s.get("country")
+        
+        if country not in AFRICAN_COUNTRIES and "africa" not in (tags or "").lower():
+            continue
+
+        existing = db.query(models.Channel).filter(models.Channel.name == name).first()
+        auto_region = detect_region(name, s.get("state"), tags) or country
+        auto_cat_id = detect_category_id(name, tags, db)
+        
+        if not existing:
+            new_channel = models.Channel(
+                name=name, owner_id=admin_id, owner_name="Radio-Browser Import",
+                phone="000000000", amount="Gratuit", payment_method="Import",
+                auth_word="radiobrowser", region=auto_region, category_id=auto_cat_id
+            )
+            db.add(new_channel)
+            db.flush()
+            new_emission = models.Emission(
+                title=f"Direct : {name}", channel_id=new_channel.id, creator_id=admin_id,
+                is_live=True, stream_url=stream_url, description=f"Flux importé ({country})",
+                category_id=auto_cat_id
+            )
+            db.add(new_emission)
+            imported += 1
+    
+    db.commit()
+    print(f"LOG: Synchro terminée. {imported} nouvelles stations ajoutées.")
+
+# --- Tâche de fond pour synchro périodique ---
+import asyncio
+async def periodic_sync():
+    while True:
+        await asyncio.sleep(43200) # Toutes les 12 heures
+        db = next(get_db())
+        admin = db.query(models.User).filter(models.User.is_admin == True).first()
+        if admin:
+            await perform_sync_logic(db, admin.id)
+
 @app.on_event("startup")
-def create_admin():
+async def startup_db_setup():
     db = next(get_db())
+    
+    # 1. Créer l'admin par défaut
     admin = db.query(models.User).filter(models.User.username == "LUKO").first()
     if not admin:
         hashed_pw = auth.hash_password("LUKO123")
-        new_admin = models.User(
+        admin = models.User(
             username="LUKO",
             email="admin@luko.com",
             hashed_password=hashed_pw,
             is_admin=True
         )
-        db.add(new_admin)
+        db.add(admin)
         db.commit()
+        db.refresh(admin)
+
+    # 2. Gérer les catégories
+    required_categories = [
+        {"name": "Musique", "icon": "music", "description": "Toutes les nouveautés musicales"},
+        {"name": "Sport", "icon": "football", "description": "Actualités sportives et lives"},
+        {"name": "Environnement", "icon": "leaf", "description": "Écologie et nature"},
+        {"name": "Éducation", "icon": "book-open", "description": "Apprentissage et savoir"},
+        {"name": "Actualités", "icon": "news", "description": "Informations en temps réel"},
+        {"name": "Culture", "icon": "palette", "description": "Arts et traditions"}
+    ]
+    for cat_data in required_categories:
+        existing = db.query(models.Category).filter(models.Category.name == cat_data["name"]).first()
+        if not existing:
+            db.add(models.Category(**cat_data))
+    db.commit()
+
+    # 3. Lancer la synchro initiale au démarrage
+    await perform_sync_logic(db, admin.id)
+    
+    # 4. Lancer la boucle de synchro périodique en arrière-plan
+    asyncio.create_task(periodic_sync())
 
 app.add_middleware(
     CORSMiddleware,
@@ -148,7 +315,73 @@ def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db
 # CATEGORIES
 @app.get("/api/categories", response_model=List[schemas.CategoryResponse])
 def get_categories(db: Session = Depends(get_db)):
-    return db.query(models.Category).all()
+    categories = db.query(models.Category).all()
+    results = []
+    for cat in categories:
+        # Calcul des stats (Étape 1)
+        ch_count = db.query(models.Channel).filter(models.Channel.category_id == cat.id).count()
+
+        # Une émission est comptée si elle a la catégorie OU si sa chaîne a la catégorie
+        from sqlalchemy import or_
+        em_count = db.query(models.Emission).join(models.Channel, isouter=True).filter(
+            or_(
+                models.Emission.category_id == cat.id,
+                models.Channel.category_id == cat.id
+            )
+        ).count()
+
+        results.append(schemas.CategoryResponse(
+            id=cat.id,
+            name=cat.name,
+            description=cat.description,
+            icon=cat.icon,
+            channels_count=ch_count,
+            emissions_count=em_count
+        ))
+    return results
+
+@app.get("/api/categories/{id}/emissions", response_model=List[schemas.EmissionResponse])
+def get_category_emissions(id: int, db: Session = Depends(get_db)):
+    # PARTIE A : Logique de fenêtre de 28 jours
+    now = datetime.now()
+    cutoff_date = now - timedelta(days=FENETRE_DISPONIBILITE_JOURS)
+
+    from sqlalchemy import or_
+    # On récupère les émissions qui ont directement la catégorie 
+    # OU dont la chaîne parente a la catégorie
+    emissions = db.query(models.Emission).join(models.Channel, isouter=True).filter(
+        or_(
+            models.Emission.category_id == id,
+            models.Channel.category_id == id
+        )
+    ).all()
+
+    results = []
+    for em in emissions:
+        # On suppose que created_at sert de date de diffusion pour les archives
+        is_old = False
+        if not em.is_live and em.created_at:
+            if em.created_at < cutoff_date:
+                is_old = True
+
+        if is_old:
+            continue # On exclut les émissions verrouillées (plus de 28 jours)
+
+        res = schemas.EmissionResponse(
+            id=em.id,
+            title=em.title,
+            description=em.description or "",
+            is_live=em.is_live,
+            creator_id=em.creator_id,
+            channel_id=em.channel_id,
+            category_id=em.category_id,
+            audio_path=em.audio_path,
+            stream_url=em.stream_url,
+            image_url=em.image_url,
+            channel_name=em.channel.name if em.channel else "Inconnue"
+        )
+        results.append(res)
+    return results
 
 @app.post("/api/categories", response_model=schemas.CategoryResponse)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -176,10 +409,12 @@ def create_channel(channel: schemas.ChannelCreate, db: Session = Depends(get_db)
     return new_channel
 
 @app.get("/api/channels", response_model=List[schemas.ChannelResponse])
-def get_all_channels(category_id: int = None, db: Session = Depends(get_db)):
+def get_all_channels(category_id: int = None, region: str = None, db: Session = Depends(get_db)):
     query = db.query(models.Channel)
     if category_id:
         query = query.filter(models.Channel.category_id == category_id)
+    if region:
+        query = query.filter(models.Channel.region == region)
     return query.all()
 
 @app.get("/api/my-channels", response_model=List[schemas.ChannelResponse])
@@ -295,21 +530,39 @@ def get_channel_live_status(channel_id: int, db: Session = Depends(get_db)):
     return {"is_live": is_live, "listeners": manager.get_listener_count(str(channel_id))}
 
 @app.get("/api/search")
-def search_global(q: str, db: Session = Depends(get_db)):
+async def search_global(q: str, db: Session = Depends(get_db)):
     if not q:
         return {"channels": [], "emissions": []}
     
     query = f"%{q}%"
     
-    # Recherche dans les chaînes
+    # 1. Recherche locale
     channels = db.query(models.Channel).filter(models.Channel.name.ilike(query)).all()
-    
-    # Recherche dans les émissions
     emissions = db.query(models.Emission).filter(models.Emission.title.ilike(query)).all()
+    
+    # 2. Recherche Mondiale (Radio-Browser)
+    import httpx
+    rb_channels = []
+    try:
+        url = f"https://de1.api.radio-browser.info/json/stations/byname/{q}?limit=10"
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, timeout=5)
+            if res.status_code == 200:
+                for s in res.json():
+                    rb_channels.append({
+                        "id": f"rb_{s.get('stationuuid')}",
+                        "name": s.get("name"),
+                        "region": s.get("country"),
+                        "stream_url": s.get("url_resolved"),
+                        "is_external": True
+                    })
+    except:
+        pass # Silencieux si erreur API
     
     return {
         "channels": channels,
-        "emissions": emissions
+        "emissions": emissions,
+        "world_channels": rb_channels
     }
 
 # ADMIN
@@ -386,6 +639,135 @@ def admin_delete_user(user_id: int, db: Session = Depends(get_db), current_user:
 def admin_get_channels(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
     if not current_user.is_admin: raise HTTPException(status_code=403)
     return db.query(models.Channel).all()
+
+@app.patch("/api/admin/channels/{channel_id}", response_model=schemas.ChannelResponse)
+def admin_update_channel(channel_id: int, update: schemas.ChannelUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not current_user.is_admin: raise HTTPException(status_code=403)
+    db_channel = db.query(models.Channel).filter(models.Channel.id == channel_id).first()
+    if not db_channel: raise HTTPException(status_code=404)
+    
+    update_data = update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_channel, key, value)
+        
+    db.commit()
+    db.refresh(db_channel)
+    return db_channel
+
+@app.post("/api/admin/sync-radiobrowser")
+async def sync_radiobrowser(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not current_user.is_admin: raise HTTPException(status_code=403)
+    
+    import httpx
+    # 1. Radios du Cameroun (Toutes)
+    cam_url = "https://de1.api.radio-browser.info/json/stations/bycountry/Cameroon"
+    # 2. Radios d'Afrique (Top 100)
+    africa_url = "https://de1.api.radio-browser.info/json/stations/bytag/africa?limit=100&order=votes&reverse=true"
+    # 3. Sport Afrique
+    sport_africa_url = "https://de1.api.radio-browser.info/json/stations/bytag/sport?limit=30&order=votes&reverse=true"
+    
+    stations = []
+    try:
+        async with httpx.AsyncClient() as client:
+            # Récupération Cameroun
+            r_cam = await client.get(cam_url, timeout=15)
+            if r_cam.status_code == 200: stations.extend(r_cam.json())
+            
+            # Récupération Afrique
+            r_africa = await client.get(africa_url, timeout=15)
+            if r_africa.status_code == 200: stations.extend(r_africa.json())
+
+            # Récupération Sport (on filtrera par pays africains ensuite si besoin, ou on fait confiance aux tags)
+            r_sport = await client.get(sport_africa_url, timeout=15)
+            if r_sport.status_code == 200: 
+                # On ne garde que si le pays est africain (optionnel mais recommandé par l'utilisateur)
+                stations.extend(r_sport.json())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur API Radio-Browser: {str(e)}")
+
+    AFRICAN_COUNTRIES = [
+        "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi", "Cabo Verde", "Cameroon", 
+        "Central African Republic", "Chad", "Comoros", "Congo", "Cote d'Ivoire", "Djibouti", "Egypt", 
+        "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia", "Ghana", "Guinea", 
+        "Guinea-Bissau", "Kenya", "Lesotho", "Liberia", "Libya", "Madagascar", "Malawi", "Mali", 
+        "Mauritania", "Mauritius", "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda", 
+        "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia", "South Africa", 
+        "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia", "Uganda", "Zambia", "Zimbabwe",
+        "Ivory Coast", "United Republic Of Tanzania", "The Democratic Republic Of The Congo"
+    ]
+
+    imported = 0
+    updated = 0
+    
+    for s in stations:
+        name = s.get("name")
+        stream_url = s.get("url_resolved")
+        state = s.get("state")
+        tags = s.get("tags")
+        country = s.get("country")
+        
+        # Filtre de sécurité : On ne garde QUE l'Afrique
+        if country not in AFRICAN_COUNTRIES and "africa" not in (tags or "").lower():
+            continue
+
+        existing = db.query(models.Channel).filter(models.Channel.name == name).first()
+        
+        auto_region = detect_region(name, state, tags)
+        if not auto_region and country:
+            auto_region = country
+
+        auto_cat_id = detect_category_id(name, tags, db)
+        
+        if existing:
+            if not existing.region: existing.region = auto_region
+            if not existing.category_id: existing.category_id = auto_cat_id
+            updated += 1
+        else:
+            new_channel = models.Channel(
+                name=name,
+                owner_id=current_user.id,
+                owner_name="Radio-Browser Import",
+                phone="000000000",
+                amount="Gratuit",
+                payment_method="Import",
+                auth_word="radiobrowser",
+                region=auto_region,
+                category_id=auto_cat_id
+            )
+            db.add(new_channel)
+            db.flush()
+            
+            new_emission = models.Emission(
+                title=f"Direct : {name}",
+                channel_id=new_channel.id,
+                creator_id=current_user.id,
+                is_live=True,
+                stream_url=stream_url,
+                description=f"Flux importé ({country})",
+                category_id=auto_cat_id
+            )
+            db.add(new_emission)
+            imported += 1
+            
+    db.commit()
+    return {"message": "Synchronisation Africaine terminée", "imported": imported, "updated": updated}
+
+@app.post("/api/admin/auto-assigner-regions")
+def admin_auto_assign_regions(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not current_user.is_admin: raise HTTPException(status_code=403)
+    
+    channels = db.query(models.Channel).filter(models.Channel.region == None).all()
+    assigned = 0
+    
+    for c in channels:
+        # On tente de deviner via le nom uniquement car on n'a plus les données API ici
+        guess = detect_region(c.name, None, None)
+        if guess:
+            c.region = guess
+            assigned += 1
+            
+    db.commit()
+    return {"message": "Traitement terminé", "assigned": assigned, "remaining": len(channels) - assigned}
 
 @app.delete("/api/admin/channels/{channel_id}")
 def admin_delete_channel(channel_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
@@ -521,13 +903,32 @@ def get_channel_planning(channel_id: int, db: Session = Depends(get_db)):
 
 # EMISSIONS & UPLOAD
 @app.get("/api/emissions", response_model=List[schemas.EmissionResponse])
-def get_all_emissions(is_live: bool = None, category_id: int = None, db: Session = Depends(get_db)):
-    query = db.query(models.Emission)
+def get_all_emissions(is_live: bool = None, category_id: int = None, region: str = None, db: Session = Depends(get_db)):
+    from sqlalchemy import or_
+    query = db.query(models.Emission).join(models.Channel, isouter=True)
+    
     if is_live is not None:
         query = query.filter(models.Emission.is_live == is_live)
+        
     if category_id:
-        query = query.filter(models.Emission.category_id == category_id)
-    return query.all()
+        query = query.filter(
+            or_(
+                models.Emission.category_id == category_id,
+                models.Channel.category_id == category_id
+            )
+        )
+        
+    if region:
+        query = query.filter(models.Channel.region == region)
+    
+    emissions = query.all()
+    results = []
+    for em in emissions:
+        res = schemas.EmissionResponse.from_orm(em)
+        if em.channel:
+            res.channel_name = em.channel.name
+        results.append(res)
+    return results
 
 @app.post("/api/emissions", response_model=schemas.EmissionResponse)
 def create_emission(emission: schemas.EmissionCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):

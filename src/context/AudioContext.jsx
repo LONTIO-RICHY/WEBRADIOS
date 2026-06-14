@@ -6,6 +6,7 @@ const AudioContext = createContext();
 export function AudioProvider({ children }) {
     const [currentChannel, setCurrentChannel] = useState(null);
     const [currentTrack, setCurrentTrack] = useState(null);
+    const [currentEmission, setCurrentEmission] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [statusMessage, setStatusMessage] = useState("Prêt pour l'écoute");
     
@@ -40,8 +41,77 @@ export function AudioProvider({ children }) {
         console.log("Audio : Système arrêté");
     };
 
+    const playEmission = (emission) => {
+        if (!emission || (!emission.stream_url && !emission.audio_path)) {
+            console.warn("Audio : Pas de source pour cette émission", emission);
+            setStatusMessage("Indisponible");
+            return;
+        }
+
+        stopStreaming();
+        setCurrentChannel(null);
+        setCurrentTrack(null);
+        setCurrentEmission(emission);
+        setIsPlaying(true);
+        setStatusMessage(`EN COURS — ${emission.title}`);
+
+        let url = emission.stream_url;
+        if (!url && emission.audio_path) {
+            const cleanPath = emission.audio_path.replace(/\\/g, "/").replace(/^\/+/, "");
+            url = `${api.defaults.baseURL}/${cleanPath}`;
+        }
+        
+        console.log("Audio : Lecture émission ->", url);
+        
+        if (htmlAudioRef.current) {
+            // Pas de crossOrigin pour les flux externes pour éviter les blocages CORS
+            htmlAudioRef.current.removeAttribute("crossOrigin");
+            htmlAudioRef.current.src = url;
+            htmlAudioRef.current.play().catch(err => {
+                console.error("Audio : Erreur play() émission", err);
+                setStatusMessage("Erreur de lecture");
+                setIsPlaying(false);
+            });
+        }
+    };
+
     const playChannel = async (channel) => {
-        // Initialiser l'AudioContext s'il n'existe pas ou est fermé
+        const channelId = typeof channel === 'object' ? channel.id : channel;
+        let channelData = typeof channel === 'object' ? channel : null;
+
+        console.log("Audio : playChannel appelé pour ID", channelId, channelData);
+
+        // On force la récupération des données fraîches pour être sûr d'avoir l'auth_word
+        try {
+            const res = await api.get(`/api/channels/${channelId}`);
+            channelData = res.data;
+            console.log("Audio : Données canal récupérées", channelData);
+        } catch (err) {
+            console.error("Audio : Erreur récup canal", err);
+        }
+
+        // Cas spécial : Radio-Browser (Importées)
+        if (channelData && (channelData.auth_word === "radiobrowser" || channelData.payment_method === "Import")) {
+            console.log("Audio : Canal importé détecté via auth_word, recherche du flux...");
+            try {
+                const resEm = await api.get(`/api/channels/${channelId}/emissions`);
+                console.log("Audio : Émissions du canal", resEm.data);
+                const liveEm = resEm.data.find(e => e.is_live && e.stream_url);
+                if (liveEm) {
+                    console.log("Audio : Flux externe trouvé, redirection vers playEmission", liveEm.stream_url);
+                    playEmission(liveEm);
+                    return;
+                } else {
+                    console.warn("Audio : Aucune émission LIVE avec stream_url trouvée pour ce canal importé");
+                }
+            } catch (err) {
+                console.error("Audio : Erreur recherche flux externe", err);
+            }
+        }
+
+        console.log("Audio : Passage en mode WebSocket (Direct local)");
+
+        // Initialiser l'AudioContext pour le mode WebSocket (Direct local)
         if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             audioCtxRef.current = new AudioContextClass({ sampleRate: 44100 });
@@ -51,9 +121,6 @@ export function AudioProvider({ children }) {
         if (audioCtx.state === 'suspended') {
             await audioCtx.resume();
         }
-
-        const channelId = typeof channel === 'object' ? channel.id : channel;
-        const channelData = typeof channel === 'object' ? channel : null;
 
         // Si on clique sur le même canal déjà en cours de lecture, on arrête
         if (currentChannel?.id === channelId && isPlaying) {
@@ -75,17 +142,8 @@ export function AudioProvider({ children }) {
         }
 
         setCurrentTrack(null);
-        
-        if (!channelData) {
-            try {
-                const res = await api.get(`/api/channels/${channelId}`);
-                setCurrentChannel(res.data);
-            } catch (err) {
-                setCurrentChannel({ id: channelId, name: "Radio en direct" });
-            }
-        } else {
-            setCurrentChannel(channelData);
-        }
+        setCurrentEmission(null);
+        setCurrentChannel(channelData || { id: channelId, name: "Radio en direct" });
 
         setIsPlaying(true);
         setStatusMessage("Connexion...");
@@ -135,7 +193,7 @@ export function AudioProvider({ children }) {
         socket.onclose = (e) => {
             console.log("Audio : WebSocket fermé", e.code);
             // Si on n'a pas arrêté manuellement, c'est peut-être une fin de stream
-            if (isPlaying) {
+            if (isPlaying && socketRef.current === socket) {
                 setIsPlaying(false);
                 setStatusMessage("Stream terminé");
             }
@@ -175,7 +233,7 @@ export function AudioProvider({ children }) {
         console.log("Audio : Lecture fichier ->", trackUrl);
         
         if (htmlAudioRef.current) {
-            htmlAudioRef.current.crossOrigin = "anonymous";
+            htmlAudioRef.current.removeAttribute("crossOrigin");
             htmlAudioRef.current.src = trackUrl;
             htmlAudioRef.current.volume = 1.0;
             htmlAudioRef.current.play().catch(err => {
@@ -197,7 +255,7 @@ export function AudioProvider({ children }) {
             return;
         }
 
-        // 1. Si on a déjà un canal ou track en mémoire
+        // 1. Si on a déjà un canal, track ou émission en mémoire
         if (currentChannel) {
             console.log("Audio : Lecture du canal en mémoire", currentChannel.id);
             await playChannel(currentChannel);
@@ -207,6 +265,12 @@ export function AudioProvider({ children }) {
         if (currentTrack) {
             console.log("Audio : Lecture du track en mémoire", currentTrack.title);
             playTrack(currentTrack);
+            return;
+        }
+
+        if (currentEmission) {
+            console.log("Audio : Lecture de l'émission en mémoire", currentEmission.title);
+            playEmission(currentEmission);
             return;
         }
 
@@ -256,13 +320,16 @@ export function AudioProvider({ children }) {
         currentChannelId,
         currentTrack,
         setCurrentTrack,
+        currentEmission,
+        setCurrentEmission,
         isPlaying, 
         statusMessage, 
         playChannel, 
         playTrack,
+        playEmission,
         stopStreaming,
         togglePlay 
-    }), [currentChannel, currentChannelId, currentTrack, isPlaying, statusMessage]);
+    }), [currentChannel, currentChannelId, currentTrack, currentEmission, isPlaying, statusMessage]);
 
     return (
         <AudioContext.Provider value={value}>

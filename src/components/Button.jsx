@@ -1,18 +1,40 @@
 import { useState } from "react";
 import { Menu, Search, LogOut, X } from "lucide-react";
 import Icorn from "./Icorn";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export const Button = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
         navigate("/");
+    };
+
+    const isActive = (path) => {
+        if (path === "/" && location.pathname === "/") return true;
+        if (path !== "/" && location.pathname.startsWith(path)) return true;
+        return false;
+    };
+
+    const navLinkClass = (path) => {
+        const isActiveLink = isActive(path);
+        const base = "relative py-2 transition-all duration-300 cursor-pointer font-bold text-sm uppercase tracking-wider group";
+        
+        // Classes pour l'élément <li>
+        const textClass = isActiveLink ? "text-[#D4480A]" : "text-[#1A1A18] hover:text-[#D4480A]";
+        
+        // On crée l'effet de soulignement progressif via une div absolue ou un pseudo-élément
+        // Ici on va utiliser le pseudo-élément 'after' avec une animation de scale
+        const underlineBase = "after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-1 after:bg-[#D4480A] after:rounded-full after:transition-transform after:duration-500 after:origin-left";
+        const underlineAnimation = isActiveLink ? "after:w-full after:scale-x-100" : "after:w-full after:scale-x-0 group-hover:after:scale-x-100";
+        
+        return `${base} ${textClass} ${underlineBase} ${underlineAnimation}`;
     };
 
     return (
@@ -27,25 +49,25 @@ export const Button = () => {
                     </h2>
                 </div>
 
-                <ul className="hidden xl:flex items-center gap-8 font-medium text-sm uppercase tracking-wide">
-                    <li className="text-[#1A1A18] hover:text-[#D4480A] transition-colors cursor-pointer">
-                        <Link to="/">Accueil</Link>
+                <ul className="hidden xl:flex items-center gap-8 font-medium text-sm uppercase tracking-wide h-full">
+                    <li className={navLinkClass("/")}>
+                        <Link to="/" className="block">Accueil</Link>
                     </li>
-                    <li className="text-[#1A1A18] hover:text-[#D4480A] transition-colors cursor-pointer">
-                        <Link to="Chaines">Chaines</Link>
+                    <li className={navLinkClass("/Chaines")}>
+                        <Link to="/Chaines" className="block">Chaines</Link>
                     </li>
-                    <li className="text-[#1A1A18] hover:text-[#D4480A] transition-colors cursor-pointer">
-                        <Link to="Emission">Emission Mondiale</Link>
+                    <li className={navLinkClass("/Emission")}>
+                        <Link to="/Emission" className="block">Emission Africaine</Link>
                     </li>
-                    <li className="text-[#1A1A18] hover:text-[#D4480A] transition-colors cursor-pointer">
-                        <Link to="Categorie">Catégories Mondiale</Link>
+                    <li className={navLinkClass("/Categorie")}>
+                        <Link to="/Categorie" className="block">Catégories Africaine</Link>
                     </li>
-                    <li className="text-[#D4480A] font-black tracking-widest hover:scale-105 transition-all cursor-pointer bg-orange-50 px-4 py-1 rounded-full border border-orange-100">
-                        <Link to="/Planning">Programme TV/Radio</Link>
+                    <li className={navLinkClass("/Planning")}>
+                        <Link to="/Planning" className="block">Programme TV/Radio</Link>
                     </li>
                     {user?.is_admin && (
-                        <li className="bg-[#FFF3EC] text-[#D4480A] px-3 py-1 rounded-full text-xs font-black border border-[#D4480A]/20 animate-pulse">
-                            <Link to="/AdminDashboard">ADMIN</Link>
+                        <li className={`${navLinkClass("/AdminDashboard")} bg-[#FFF3EC] px-3 py-1 rounded-full border border-[#D4480A]/20 after:hidden`}>
+                            <Link to="/AdminDashboard" className="animate-pulse">ADMIN</Link>
                         </li>
                     )}
                 </ul>
@@ -105,17 +127,20 @@ export const Button = () => {
 
                 {isMenuOpen && (
                     <div className="absolute xl:hidden top-20 left-0 w-full bg-white flex flex-col items-center font-bold text-base shadow-2xl border-b border-gray-100 py-4 animate-in slide-in-from-top-4 duration-300">
-                        <li className="list-none w-full text-center p-4 text-[#1A1A18] hover:bg-[#FFF3EC] hover:text-[#D4480A] transition-all cursor-pointer">
+                        <li className={`list-none w-full text-center p-4 transition-all cursor-pointer ${isActive("/") ? "bg-orange-50 text-[#D4480A]" : "text-[#1A1A18] hover:bg-gray-50"}`}>
                             <Link to="/" onClick={() => setIsMenuOpen(false)}>Accueil</Link>
                         </li>
-                        <li className="list-none w-full text-center p-4 text-[#1A1A18] hover:bg-[#FFF3EC] hover:text-[#D4480A] transition-all cursor-pointer">
-                            <Link to="Chaines" onClick={() => setIsMenuOpen(false)}>Chaines</Link>
+                        <li className={`list-none w-full text-center p-4 transition-all cursor-pointer ${isActive("/Chaines") ? "bg-orange-50 text-[#D4480A]" : "text-[#1A1A18] hover:bg-gray-50"}`}>
+                            <Link to="/Chaines" onClick={() => setIsMenuOpen(false)}>Chaines</Link>
                         </li>
-                        <li className="list-none w-full text-center p-4 text-[#1A1A18] hover:bg-[#FFF3EC] hover:text-[#D4480A] transition-all cursor-pointer">
-                            <Link to="Emission" onClick={() => setIsMenuOpen(false)}>Emission</Link>
+                        <li className={`list-none w-full text-center p-4 transition-all cursor-pointer ${isActive("/Emission") ? "bg-orange-50 text-[#D4480A]" : "text-[#1A1A18] hover:bg-gray-50"}`}>
+                            <Link to="/Emission" onClick={() => setIsMenuOpen(false)}>Emission</Link>
                         </li>
-                        <li className="list-none w-full text-center p-4 text-[#1A1A18] hover:bg-[#FFF3EC] hover:text-[#D4480A] transition-all cursor-pointer">
-                            <Link to="Categorie" onClick={() => setIsMenuOpen(false)}>Catégories</Link>
+                        <li className={`list-none w-full text-center p-4 transition-all cursor-pointer ${isActive("/Categorie") ? "bg-orange-50 text-[#D4480A]" : "text-[#1A1A18] hover:bg-gray-50"}`}>
+                            <Link to="/Categorie" onClick={() => setIsMenuOpen(false)}>Catégories</Link>
+                        </li>
+                        <li className={`list-none w-full text-center p-4 transition-all cursor-pointer ${isActive("/Planning") ? "bg-orange-50 text-[#D4480A]" : "text-[#1A1A18] hover:bg-gray-50"}`}>
+                            <Link to="/Planning" onClick={() => setIsMenuOpen(false)}>Programme TV/Radio</Link>
                         </li>
                         <div className="w-full px-8 pt-4 mt-4 border-t border-gray-50 space-y-3">
                             {user ? (
