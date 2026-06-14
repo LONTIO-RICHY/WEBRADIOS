@@ -1,19 +1,18 @@
 import ChainesGauche from "./ChainesGauche";
 import ChainesDroite from "./ChainesDroite";
 
-
-export const Chaines = ()=>{
-    return(
-        <div className="flex">
-            <div className="w-1/3 h-screen border-2 border-black bg-gray-500 m-2 text-center"> 
-                <div>
-                    <ChainesGauche />
-                </div>
+export const Chaines = () => {
+    return (
+        <div className="flex h-screen bg-[#F5F2EE] overflow-hidden">
+            {/* Colonne de gauche - Liste des chaînes */}
+            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 shadow-xl z-20"> 
+                <ChainesGauche />
             </div>
-            <div className="w-2/3 h-screen bg-gray-500 border-2 border-black m-2" >
-            <div> <ChainesDroite/> </div>
+
+            {/* Colonne de droite - Détails et Emissions */}
+            <div className="flex-1 overflow-hidden relative z-10">
+                <ChainesDroite />
             </div>
         </div>
-        
     );
 }

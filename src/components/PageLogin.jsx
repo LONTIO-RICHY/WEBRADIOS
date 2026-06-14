@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { Corps } from "./Corps";
+import api from "../Api";
+import { useAuth } from "../context/AuthContext";
 
 function PageLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,62 +22,66 @@ function PageLogin() {
     try {
       setErreur("");
 
-      // 1. Envoi des identifiants au backend
-      const response = await axios.post("http://127.0.0.1:8000/api/login", {
+      const response = await api.post("/api/login", {
         username: username,
         password: password
       });
 
-      // 2. SAUVEGARDE DU TOKEN (Le ticket d'accès)
-      // On stocke le token et le nom d'utilisateur dans le navigateur
-      localStorage.setItem("token", response.data.access_token);
-      localStorage.setItem("username", response.data.username);
+      login(response.data);
 
       alert(`Ravi de vous revoir, ${response.data.username} !`);
       
-      // 3. Redirection vers la page Emission
-      navigate("/Corps");
+      if (response.data.is_admin) {
+        navigate("/AdminDashboard");
+      } else {
+        navigate("/");
+      }
 
     } catch (error) {
-      // Si le mot de passe ou le login est faux, on affiche l'erreur du backend
       const messageErreur = error.response?.data?.detail || "Impossible de se connecter.";
       setErreur(messageErreur);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-red-200">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-96">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">
-          Connexion
+    <div className="min-h-screen flex items-center justify-center bg-[#FFF3EC]">
+      <div className="bg-white p-8 rounded-2xl shadow-xl border border-orange-100/50 w-96 animate-in fade-in zoom-in duration-300">
+        <h1 className="text-3xl font-black text-center mb-8 text-[#1A1A18] tracking-tight">
+          LUKO<span className="text-[#D4480A]">LOGIN</span>
         </h1>
 
         {erreur && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          <div className="bg-red-50 text-[#C0392B] p-4 rounded-xl mb-6 text-sm font-bold border border-red-100">
             {erreur}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="text"
-            placeholder="username (Login)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div className="space-y-1">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Identifiant</label>
+            <input
+              type="text"
+              placeholder="votre pseudo"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border border-gray-100 bg-gray-50 p-4 rounded-xl outline-none focus:ring-2 focus:ring-[#D4480A]/20 focus:border-[#D4480A] transition-all"
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-3 rounded-lg"
-          />
+          <div className="space-y-1">
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Mot de passe</label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-100 bg-gray-50 p-4 rounded-xl outline-none focus:ring-2 focus:ring-[#D4480A]/20 focus:border-[#D4480A] transition-all"
+            />
+          </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white p-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            className="w-full bg-[#D4480A] hover:bg-[#B83A08] text-white p-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-orange-200/50 transform active:scale-95 transition-all mt-4"
           >
             Se connecter
           </button>

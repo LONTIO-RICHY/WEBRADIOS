@@ -4,7 +4,6 @@ import { react } from "react";
 
 // import { BrowserRouter, Routes, Route } from "react-router-dom";
 import {  Routes,Route,BrowserRouter} from "react-router-dom";
-import { Search, SparklesAlt } from "@boxicons/react";
 import { Chaines } from "./components/Chaines";
 import { Corps } from "./components/Corps";
 import { Emission } from "./components/Emission";
@@ -18,46 +17,61 @@ import Api from "./Api";
 import PageLogin from "./components/PageLogin";
 import Studio from "./components/Studio";
 import Player from "./components/Player";
+import CommentairesPage from "./components/CommentairesPage";
 
 
 
 
 
+import { AuthProvider } from "./context/AuthContext";
+import { AudioProvider } from "./context/AudioContext";
+import { Toaster } from "react-hot-toast";
+import AdminDashboard from "./components/AdminDashboard";
+import ChannelDashboard from "./components/ChannelDashboard";
+import MyLibrary from "./components/MyLibrary";
+import Footer from "./components/Footer";
+import PlanningPublic from "./components/PlanningPublic";
 
 function App() {
-  <Api />
   return (
-    <div className="w-full h-screen   from-red-300">    
-         
-        <Button /> 
+    <AuthProvider>
+      <AudioProvider>
+        <Toaster position="top-right" />
+        <div className="w-full min-h-screen flex flex-col bg-[#F5F2EE]">    
+          <Button /> 
 
-      {/* <Liens /> */}
-    
-       <Routes>
-      
-        <Route path="/" element={<Corps />} />
-        <Route path="/Pageconnexion" element={<Pageconnexion />} />
-        <Route path="/PageLogin" element={<PageLogin />} />
-        <Route path="/Chaines" element={<Chaines />} />
-        <Route path="/chaines/:id" element={<Chaines />} />
-        <Route path="/Emission" element={<Emission />} />
-        <Route path="/emissions/:id" element={<Emission />} />
-        <Route path="/Categorie" element={<Categorie />} />
-        <Route path="/categorie/:id" element={<Categorie />} />
-        <Route path="/Studio"  element={<Studio />}/>
-        <Route path="/Player"  element={<Player />}/>
-
-      
-        <Route path="*" element={<Corps />} />
-      </Routes>
-    <div className=" bottom-5 left-5 right-5 w-full z-50  bg-red-400 h-24">
-      <Player/>
-    </div>
-       
-    </div>
-
-  
-  
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<Corps />} />
+              <Route path="/Pageconnexion" element={<Pageconnexion />} />
+              <Route path="/PageLogin" element={<PageLogin />} />
+              <Route path="/Chaines" element={<Chaines />} />
+              <Route path="/chaines/:id" element={<Chaines />} />
+              <Route path="/Emission" element={<Emission />} />
+              <Route path="/emissions/:id" element={<Emission />} />
+              <Route path="/Categorie" element={<Categorie />} />
+              <Route path="/categorie/:id" element={<Categorie />} />
+              <Route path="/Studio"  element={<Studio />}/>
+              <Route path="/Player"  element={<Player />}/>
+              <Route path="/CommentairesPage"  element={<CommentairesPage />}/>
+              <Route path="/AdminDashboard" element={<AdminDashboard />} />
+              <Route path="/ChannelDashboard/:id" element={<ChannelDashboard />} />
+              <Route path="/MaBibliotheque" element={<MyLibrary />} />
+              <Route path="/Planning" element={<PlanningPublic />} />
+              <Route path="*" element={<Corps />} />
+            </Routes>
+          </main>
+          
+          <Footer />
+          
+          <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pointer-events-none">
+            <div className="max-w-4xl mx-auto pointer-events-auto">
+              <Player/>
+            </div>
+          </div>
+        </div>
+      </AudioProvider>
+    </AuthProvider>
   );
 }
 

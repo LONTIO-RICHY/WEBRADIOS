@@ -6,14 +6,14 @@ export const Categorie = () => {
   const [categorieActiveId, setCategorieActiveId] = useState(null);
 
   return (
-    <div className="flex">
-      <div className="w-1/3 h-screen border-2 border-black bg-gray-500 m-2 text-center">
+    <div className="flex h-screen bg-[#F5F2EE] overflow-hidden">
+      <div className="w-full md:w-80 lg:w-96 flex-shrink-0 shadow-xl z-20">
         <CategoriesGauche
           activeId={categorieActiveId}
           onSelect={setCategorieActiveId}
         />
       </div>
-      <div className="w-2/3 h-screen bg-gray-500 border-2 border-black m-2">
+      <div className="flex-1 overflow-hidden relative z-10">
         <CategoriesDroite id={categorieActiveId} />
       </div>
     </div>

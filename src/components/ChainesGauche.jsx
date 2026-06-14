@@ -3,74 +3,196 @@
 // La colonne droite (ChainesDroite) lit l'id dans l'URL via useParams()
 
 import { Link, useParams } from "react-router-dom";
-import { CHAINES } from "./chaines.data";
-import { Search } from "@boxicons/react";
+import { Search, Radio, Compass, Heart, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import api from "../Api";
+import { useAuth } from "../context/AuthContext";
+import { ChannelSkeleton } from "./Skeleton";
 
 export default function ChainesGauche() {
-  const { id } = useParams(); // id de la chaîne active dans l'URL
+  const { id } = useParams();
+  const { user } = useAuth();
+  const [mesChaines, setMesChaines] = useState([]);
+  const [mesFavoris, setMesFavoris] = useState([]);
+  const [toutesLesChaines, setToutesLesChaines] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChannels = async () => {
+      setLoading(true);
+      try {
+        const resAll = await api.get("/api/channels");
+        setToutesLesChaines(resAll.data);
+
+        if (user) {
+          const [resMy, resFavs] = await Promise.all([
+            api.get("/api/my-channels", {
+              headers: { Authorization: `Bearer ${user.token}` }
+            }),
+            api.get("/api/favorites/me", {
+              headers: { Authorization: `Bearer ${user.token}` }
+            })
+          ]);
+          setMesChaines(resMy.data);
+          setMesFavoris(resFavs.data);
+        }
+      } catch (err) {
+        console.error("Erreur chargement des chaînes", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChannels();
+  }, [user]);
+
+  const filteredChannels = toutesLesChaines.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-white border-r border-gray-200">
+    <div className="flex flex-col h-screen bg-[#F5F2EE] border-r border-slate-200">
+      <div className="p-6">
+        <h2 className="text-xl font-black text-[#1A1A18] flex items-center gap-2 mb-6">
+          <div className="p-2 bg-[#D4480A] rounded-lg shadow-lg shadow-orange-200/50">
+            <Radio className="text-white" size={20} strokeWidth={2} />
+          </div>
+          Exploration
+        </h2>
 
-      {/* Titre */}
-      <h2 className="px-4 py-3 text-sm font-bold text-gray-800 border-b border-gray-100 flex m-auto">
-        <div className="m-auto">
-              <svg  xmlns="http://www.w3.org/2000/svg" width="24" height="24"  
-fill="currentColor" viewBox="0 0 24 24" >
-<path d="m20.39 2.21-3.01 2.34c-1.55-1.54-3.56-2.44-5.66-2.54-2.15-.09-4.14.65-5.6 2.1-1.46 1.46-2.21 3.45-2.1 5.6.1 2.12 1.02 4.14 2.58 5.7.44.44.91.82 1.42 1.15v3.43h-3v2h8v-2h-3v-2.45c.74.25 1.5.4 2.29.44h.39c2 0 3.84-.74 5.21-2.11 1.46-1.46 2.21-3.45 2.1-5.6-.07-1.48-.55-2.91-1.36-4.18l2.98-2.32-1.23-1.58ZM18 10.38c.08 1.58-.46 3.04-1.52 4.09s-2.5 1.59-4.09 1.52c-1.62-.08-3.17-.78-4.38-1.99S6.1 11.24 6.02 9.62c-.08-1.58.46-3.04 1.52-4.09C8.53 4.54 9.87 4 11.34 4h.29c1.52.07 2.99.71 4.16 1.79L11.4 9.21l1.23 1.58 4.43-3.45c.56.93.89 1.97.94 3.04"></path>
-</svg>
-          </div> Toutes les chaînes
-      </h2>
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#D4480A] transition-colors" size={18} strokeWidth={2} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher une chaîne..."
+            className="w-full pl-10 pr-4 py-3 text-sm bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-[#D4480A]/20 focus:border-[#D4480A] transition-all shadow-sm"
+          />
+        </div>
 
-      {/* Barre de recherche → connecter à GET /api/chaines?q=... */}
-      <div className="px-3 py-2 flex relative ">
-        <span className="top-4 left-2 absolute "><Search /></span>
-        <input
-          placeholder="  Rechercher une chaîne..."
-          className="w-full px-3 py-2 text-sm bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-red-400"
-        />
+        {/* Accès rapide Bibliothèque */}
+        <Link to="/MaBibliotheque">
+          <div className="mt-6 p-4 bg-[#FFF3EC] border border-orange-100 rounded-2xl flex items-center gap-3 hover:shadow-lg hover:border-orange-200 transition-all group">
+            <div className="p-2 bg-[#D4480A] rounded-lg text-white group-hover:scale-110 transition-transform">
+              <Download size={18} strokeWidth={2.5} />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-black text-[#D4480A] uppercase tracking-widest">Ma Collection</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase">Sauvegardés</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
-      {/* Liste des chaînes — chaque item est un <Link> React Router */}
-      <ul className="flex-1 overflow-y-auto px-2 space-y-1">
-        {CHAINES.map((c) => {
-          const estActif = String(c.id) === id; // chaîne sélectionnée ?
-
-          return (
-            // Link vers /chaines/:id → React Router met à jour l'URL
-            // ChainesDroite lit cet id avec useParams() et affiche les détails
-            <Link to={`/Chaines/${c.id}`} key={c.id}>
-              <li className={`flex items-center  gap-3 p-3 rounded-xl cursor-pointer transition
-                ${estActif
-                  ? "bg-red-50 border-2 border-red-400"       // style actif
-                  : "border border-gray-100 hover:bg-gray-50"  // style normal
-                }`}>
-
-                {/* Avatar coloré */}
-                <div className={`${c.couleur} w-10  h-full rounded-full flex flex-col  items-center
-                  justify-center text-white text-xs font-bold flex-shrink-0`}>
-                  {c.initials}
+      <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6">
+        {loading ? (
+          <div className="space-y-4 pt-4">
+             {[1,2,3,4,5].map(i => <ChannelSkeleton key={i} />)}
+          </div>
+        ) : (
+          <>
+            {/* Mes Chaînes Créées */}
+            {user && mesChaines.length > 0 && (
+              <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                <p className="px-2 mb-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Mes Propriétés</p>
+                <div className="space-y-2">
+                  {mesChaines.map((c) => (
+                    <Link to={`/ChannelDashboard/${c.id}`} key={`my-${c.id}`}>
+                      <div className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border border-orange-100 bg-white hover:shadow-lg hover:shadow-orange-100/50 group">
+                        <div className="w-10 h-10 bg-[#D4480A] rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-110 transition-transform">
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-[#1A1A18] truncate">{c.name}</p>
+                          <p className="text-[10px] text-[#D4480A] font-black tracking-widest uppercase">Admin</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
+              </div>
+            )}
 
-                {/* Nom + genre */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{c.nom}</p>
-                  <p className="text-xs text-gray-400">{c.genre}</p>
+            {/* Mes Favoris */}
+            {user && mesFavoris.length > 0 && (
+              <div className="animate-in fade-in slide-in-from-left-4 duration-600">
+                <p className="px-2 mb-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Heart size={12} strokeWidth={2.5} className="text-rose-500" fill="currentColor" /> Coups de cœur
+                </p>
+                <div className="space-y-2">
+                  {mesFavoris.map((c) => {
+                    const estActif = String(c.id) === id;
+                    return (
+                      <Link to={`/Chaines/${c.id}`} key={`fav-${c.id}`}>
+                        <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border
+                          ${estActif 
+                            ? "bg-[#D4480A] border-[#D4480A] shadow-xl shadow-orange-200/50" 
+                            : "bg-white border-slate-100 hover:border-orange-200"}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold
+                            ${estActif ? "bg-white text-[#D4480A]" : "bg-rose-50 text-rose-500 shadow-inner"}`}>
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold truncate ${estActif ? "text-white" : "text-[#1A1A18]"}`}>
+                              {c.name}
+                            </p>
+                            <p className={`text-[10px] font-medium ${estActif ? "text-orange-100" : "text-gray-400"}`}>
+                              En favori
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
+              </div>
+            )}
 
-                {/* Auditeurs + icône play */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs text-gray-400">👥 {c.auditeurs}</span>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs
-                    ${estActif ? "bg-red-500 text-white" : "bg-gray-100 text-gray-400"}`}>
-                    ▶
+            {/* Toutes les chaînes */}
+            <div className="animate-in fade-in slide-in-from-left-4 duration-700">
+              <p className="px-2 mb-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                 <Compass size={12} strokeWidth={2.5} /> Découvrir
+              </p>
+              <div className="space-y-2">
+                {filteredChannels.length > 0 ? (
+                  filteredChannels.map((c) => {
+                    const estActif = String(c.id) === id;
+                    const dejaEnFavori = mesFavoris.some(f => f.id === c.id);
+                    if (dejaEnFavori) return null; // Ne pas doubler si déjà dans favoris ? Ou on laisse ?
+                    // On laisse pour la découverte globale, ou on filtre. Disons qu'on filtre pour gagner de la place.
+                    
+                    return (
+                      <Link to={`/Chaines/${c.id}`} key={c.id}>
+                        <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border
+                          ${estActif 
+                            ? "bg-[#D4480A] border-[#D4480A] shadow-xl shadow-orange-200/50 translate-x-1" 
+                            : "bg-white border-slate-100 hover:border-orange-200 hover:shadow-md"}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-colors
+                            ${estActif ? "bg-white text-[#D4480A]" : "bg-slate-50 text-slate-500"}`}>
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-bold truncate ${estActif ? "text-white" : "text-[#1A1A18]"}`}>
+                              {c.name}
+                            </p>
+                            <p className={`text-[10px] font-medium ${estActif ? "text-orange-100" : "text-gray-400"}`}>
+                              {c.owner_name}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-gray-400 font-medium">Aucune chaîne trouvée</p>
                   </div>
-                </div>
-              </li>
-            </Link>
-          );
-        })}
-      </ul>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,44 @@
+ÉTAT D'AVANCEMENT DU PROJET - mon-projet-react
+Date : Mercredi 10 Juin 2026
+
+1. DESCRIPTION GÉNÉRALE
+Le projet est une plateforme de streaming audio et de gestion d'émissions (type podcast ou radio en ligne). Il se compose d'un frontend moderne en React et d'un backend robuste en FastAPI.
+
+2. ARCHITECTURE TECHNIQUE
+- Frontend : React 19, Vite, Tailwind CSS, React Router 7, Axios, Boxicons.
+- Backend : FastAPI (Python), SQLAlchemy (ORM), SQLite (Base de données), Uvicorn.
+
+3. ÉTAT DU BACKEND (Dossier /backend/code)
+- Authentification : Système complet d'inscription (/api/register) et de connexion (/api/login) avec hachage des mots de passe.
+- Streaming : Implémentation de WebSockets (/ws/stream) pour la diffusion audio en temps réel.
+- Gestion des fichiers : Système de téléchargement (uploads) configuré pour stocker et servir des fichiers MP3.
+- Modèles de données :
+    - User : Gestion des comptes utilisateurs.
+    - Emission : Création et gestion d'émissions.
+    - Track : Gestion des fichiers audio enregistrés.
+    - Comment : Système de commentaires simplifié.
+
+4. ÉTAT DU FRONTEND (Dossier /src)
+- Navigation : Routage complet avec React Router (Accueil, Connexion, Login, Chaînes, Émissions, Catégories, Studio, Player).
+- Composants Clés :
+    - Player : Lecteur audio intégré présent sur toutes les pages.
+    - Studio : Interface pour l'enregistrement ou la gestion des contenus.
+    - Chaines/Emissions/Categories : Vues pour explorer le contenu.
+    - CommentairesPage : Interface pour les interactions utilisateurs.
+- Design : Utilisation de Tailwind CSS pour un rendu moderne et responsive.
+- Intégration : Client Axios configuré (Api.jsx) pour communiquer avec le backend (localhost:8000).
+
+5. FONCTIONNALITÉS OPÉRATIONNELLES
+- Inscription et connexion des utilisateurs.
+- Structure de base de la plateforme de streaming.
+- Lecture audio via le composant Player.
+- Navigation fluide entre les différentes sections du site.
+- WebSocket prêt pour le streaming en direct.
+
+6. PROCHAINES ÉTAPES SUGGÉRÉES
+- Finaliser la liaison entre le Studio frontend et les routes d'upload backend.
+- Implémenter la logique de lecture dynamique dans le Player (charger les pistes depuis l'API).
+- Améliorer la gestion des erreurs et les retours utilisateurs (notifications, indicateurs de chargement).
+- Sécuriser les routes frontend pour n'autoriser l'accès au Studio qu'aux utilisateurs connectés.
+
+Rapport généré automatiquement par Gemini CLI.

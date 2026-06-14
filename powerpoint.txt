@@ -1,0 +1,43 @@
+# RÉSUMÉ DU PROJET : PLATEFORME DE STREAMING AUDIO (MON-PROJET-REACT)
+
+## 1. ARCHITECTURE FRONTEND (Interface Utilisateur)
+*   **React 19 & Vite** : Utilisation des dernières versions pour une rapidité de rendu et un développement optimisé.
+*   **Tailwind CSS** : Framework utilisé pour un design moderne, réactif (responsive) et une charte graphique "Corail Brûlé" élégante.
+*   **Lucide-React & Boxicons** : Bibliothèques d'icônes pour une interface intuitive.
+*   **React Router 7** : Gestion fluide de la navigation entre les pages (Studio, Dashboard, Exploration).
+*   **Audio Context API** : Gestion globale et synchronisée de la lecture audio sur tout le site.
+*   **Axios** : **L'outil principal de connexion entre le Frontend et le Backend**, permettant l'envoi et la réception des données via des requêtes HTTP.
+
+## 2. ARCHITECTURE BACKEND (Logique & API)
+*   **FastAPI** : Framework Python haute performance pour la création d'API rapides et asynchrones.
+*   **SQLAlchemy** : **L'outil de connexion entre le Backend et la Base de Données (ORM)**. Il permet de traduire le code Python en requêtes SQL de manière sécurisée.
+*   **JWT (JSON Web Tokens)** : Système d'authentification sécurisé pour gérer les sessions utilisateurs et les rôles (Admin, Propriétaire de chaîne).
+*   **WebSockets** : Technologie utilisée pour le suivi du statut "En Direct" (Live) en temps réel.
+
+## 3. PROTECTION ET GESTION DES DONNÉES
+*   **SQLite** : Base de données légère et fiable utilisée pour stocker les utilisateurs, chaînes, émissions et favoris.
+*   **Hachage de mots de passe** : Protection des informations sensibles via des algorithmes de cryptage (bcrypt).
+*   **Validation des schémas (Pydantic)** : Garantie que seules les données valides entrent dans le système.
+*   **Gestion des téléchargements sécurisés** : Stockage organisé des fichiers MP3 dans des répertoires protégés.
+
+## 4. FONCTIONNALITÉS ACTUELLES
+*   Moteur de recherche global (Chaînes et Émissions).
+*   Gestion des favoris personnalisée.
+*   Création de chaînes avec formulaire de paiement assisté (Affichage dynamique des comptes MTN/Orange).
+*   Studio de diffusion et gestion d'émissions.
+*   Notifications en temps réel (Toasts).
+
+## 5. VISION FUTURE ET ÉVOLUTIONS (Post-MVP)
+
+### A. Intégration de l'Intelligence Artificielle (IA)
+*   **Rôle** : Transcription automatique des émissions en texte, recommandation personnalisée selon les goûts de l'auditeur et génération de résumés automatiques.
+*   **Problème résolu** : Facilite l'accessibilité du contenu et aide les utilisateurs à découvrir de nouveaux programmes sans effort.
+
+### B. Service de Paiement en Ligne (API Orange Money / MTN MoMo)
+*   **Rôle** : Automatisation complète du processus de création de chaîne. Le système validera le paiement instantanément sans intervention manuelle.
+*   **Problème résolu** : Réduit le temps d'attente pour les créateurs de chaînes et sécurise les transactions financières de la plateforme.
+
+## 6. PROBLÈMES RÉSOLUS PAR LA PLATEFORME
+*   **Accessibilité** : Offre une visibilité numérique aux webradios locales camerounaises.
+*   **Monétisation** : Permet aux créateurs de monétiser leur audience via un système de gestion structuré.
+*   **Interactivité** : Brise la barrière entre l'animateur et l'auditeur grâce au direct et aux futurs outils de chat/commentaires.

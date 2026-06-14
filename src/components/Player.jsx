@@ -1,105 +1,54 @@
-import { useState, useRef, useEffect } from "react";
+import { useAudio } from "../context/AudioContext";
+import { Radio, Headphones, Play, Pause } from "lucide-react";
 
 function Player() {
-  const [isListening, setIsListening] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("Écouter un streaming en direct");
-  
-  const socketRef = useRef(null);
-  const audioCtxRef = useRef(null);
-  const nextStartTimeRef = useRef(0); // Pour enchaîner les sons de manière fluide
+  const { isPlaying, statusMessage, togglePlay, currentChannel, currentTrack } = useAudio();
 
-  // Remplace par ton IP locale pour les tests réseau (ex: "192.168.1.50")
-  const IP_LOCALE = "127.0.0.1"; 
-
-  const startStreaming = async () => {
-    setStatusMessage("Connexion au direct...");
-
-    // 1. Initialiser le décodeur de son brut du navigateur
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioCtx = new AudioContext({ sampleRate: 44100 }); // Fréquence standard CD
-    audioCtxRef.current = audioCtx;
-    nextStartTimeRef.current = audioCtx.currentTime;
-
-    // 2. Connexion WebSocket
-    const socket = new WebSocket(`ws://${IP_LOCALE}:8000/ws/stream`);
-    socketRef.current = socket;
-    socket.binaryType = "arraybuffer"; // On reçoit des données binaires brutes
-
-    socket.onopen = () => {
-      setStatusMessage("● EN DIRECT");
-      setIsListening(true);
-    };
-
-    // 3. RÉCEPTION DES FRÉQUENCES
-    socket.onmessage = (event) => {
-      if (!audioCtx || audioCtx.state === "suspended") return;
-
-      // Convertir les données binaires reçues en tableau de fréquences (Float32)
-      const arrayBuffer = event.data;
-      const float32Array = new Float32Array(arrayBuffer);
-
-      // Créer un mini-buffer audio dans le navigateur
-      const audioBuffer = audioCtx.createBuffer(1, float32Array.length, 44100);
-      audioBuffer.getChannelData(0).set(float32Array);
-
-      // Créer la source de lecture
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtx.destination);
-
-      // Enchaîner les morceaux de son sans aucun vide (gaps)
-      const currentTime = audioCtx.currentTime;
-      if (nextStartTimeRef.current < currentTime) {
-        nextStartTimeRef.current = currentTime;
-      }
-
-      source.start(nextStartTimeRef.current);
-      nextStartTimeRef.current += audioBuffer.duration; // Préparer le début du prochain morceau
-    };
-
-    socket.onclose = () => {
-      stopStreaming();
-    };
-
-    socket.onerror = (err) => {
-      console.error(err);
-      setStatusMessage("Erreur de connexion");
-    };
-  };
-
-  const stopStreaming = () => {
-    if (socketRef.current) socketRef.current.close();
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close();
-      audioCtxRef.current = null;
-    }
-    setStatusMessage("Écouter un streaming en direct");
-    setIsListening(false);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (socketRef.current) socketRef.current.close();
-    };
-  }, []);
+  const title = currentChannel ? currentChannel.name : (currentTrack ? currentTrack.title : statusMessage);
+  const subtitle = currentChannel ? "Flux en direct" : (currentTrack ? "Bibliothèque" : "Prêt pour l'écoute");
 
   return (
-    <div className="p-8 text-center bg-white rounded-2xl shadow-lg max-w-sm mx-auto my-10">
-      <h2 className="text-xl font-bold mb-6 text-gray-800">{statusMessage}</h2>
+    <div className="flex items-center gap-6 p-4 bg-white/90 backdrop-blur-xl border border-orange-100 rounded-2xl shadow-2xl shadow-orange-200/50 w-full animate-in slide-in-from-bottom-4 duration-500">
+      <div className="flex-1 flex items-center gap-4">
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-500 ${
+          isPlaying ? "bg-[#F07A3A] animate-pulse scale-105 shadow-orange-200" : "bg-[#D4480A] shadow-orange-200/50"
+        }`}>
+          {isPlaying ? <Radio size={24} strokeWidth={2} /> : <Headphones size={24} strokeWidth={2} />}
+        </div>
+        <div className="text-left">
+          <h2 className="text-sm font-black text-[#1A1A18] leading-tight uppercase tracking-wider">{title}</h2>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
+            {isPlaying ? (currentChannel ? "● EN DIRECT" : "Lecture en cours") : subtitle}
+          </p>
+        </div>
+      </div>
       
-      <button
-        onClick={isListening ? stopStreaming : startStreaming}
-        className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white transition shadow-md ${
-          isListening 
-            ? "bg-red-500 hover:bg-red-600 animate-pulse" 
-            : "bg-blue-600 hover:bg-blue-700"
-        }`}
-      >
-        {isListening ? "⏸️" : "▶️"}
-      </button>
-      <p className="mt-4 text-xs text-gray-500 font-medium">
-        {isListening ? "Cliquez pour couper le son" : "Cliquez pour vous connecter au flux audio"}
-      </p>
+      <div className="flex items-center gap-4 border-l border-gray-100 pl-6">
+        <button
+          onClick={async () => {
+            console.log("Player : Bouton cliqué");
+            await togglePlay();
+          }}
+          className={`group relative w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white transition-all active:scale-90 ${
+            isPlaying 
+              ? "bg-[#F07A3A] hover:bg-[#D4480A]" 
+              : "bg-[#D4480A] hover:bg-[#B83A08] shadow-lg shadow-orange-200/50"
+          }`}
+        >
+          <span className="relative z-10 transition-transform group-hover:scale-110">
+            {isPlaying ? <Pause size={24} strokeWidth={2.5} fill="currentColor" /> : <Play size={24} strokeWidth={2.5} fill="currentColor" />}
+          </span>
+          {isPlaying && (
+            <span className="absolute inset-0 rounded-full bg-[#F07A3A] animate-ping opacity-25"></span>
+          )}
+        </button>
+        
+        <div className="hidden sm:block text-right min-w-[120px]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+            {isPlaying ? "Cliquez pour arrêter" : "Lancer le direct"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

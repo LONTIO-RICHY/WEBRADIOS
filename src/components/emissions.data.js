@@ -6,6 +6,7 @@ export const EMISSIONS = [
     id: 1, initials: "NRJ", nom: "Le 6/9",
     animateur: "Manu Levy", horaire: "06:00-09:00",
     genre: "Pop", couleur: "bg-orange-500", live: true,
+    channel_id: 1,
     chaine: "NRJ", description: "Le morning show incontournable de NRJ avec Manu Levy. Musique, humour et bonne humeur pour bien commencer la journée.",
     animateurs: [
       { initials: "ML", nom: "Manu Levy",   role: "Présentateur principal", couleur: "bg-orange-500" },
@@ -21,6 +22,7 @@ export const EMISSIONS = [
     id: 2, initials: "SKY", nom: "Planète Rap",
     animateur: "Booska-P", horaire: "20:00-22:00",
     genre: "Hip-Hop", couleur: "bg-red-500", live: true,
+    channel_id: 2,
     chaine: "Skyrock", description: "Planète Rap est l'émission Hip-Hop de référence en France. Chaque soir, Booska-P et Difool reçoivent les plus grands artistes rap pour des interviews exclusives et des freestyles.",
     animateurs: [
       { initials: "BD", nom: "Booska-P", role: "Présentateur principal", couleur: "bg-red-500"    },
@@ -88,6 +90,7 @@ export const EMISSIONS = [
     id: 7, initials: "FI", nom: "Journal 20H",
     animateur: "Laurence", horaire: "20:00-20:30",
     genre: "Info", couleur: "bg-blue-700", live: true,
+    channel_id: 3,
     chaine: "France Info", description: "Le journal du soir de France Info avec toute l'actualité du jour présentée par Laurence.",
     animateurs: [
       { initials: "LR", nom: "Laurence", role: "Présentatrice", couleur: "bg-blue-700" },
