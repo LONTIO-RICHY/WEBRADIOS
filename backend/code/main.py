@@ -431,9 +431,11 @@ def get_channel(channel_id: int, db: Session = Depends(get_db)):
 def update_channel(channel_id: int, update: schemas.ChannelUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
     db_channel = db.query(models.Channel).filter(models.Channel.id == channel_id, models.Channel.owner_id == current_user.id).first()
     if not db_channel: raise HTTPException(status_code=404)
-    if update.name: db_channel.name = update.name
-    if update.phone: db_channel.phone = update.phone
-    if update.category_id: db_channel.category_id = update.category_id
+    if update.name is not None: db_channel.name = update.name
+    if update.phone is not None: db_channel.phone = update.phone
+    if update.owner_name is not None: db_channel.owner_name = update.owner_name
+    if update.category_id is not None: db_channel.category_id = update.category_id
+    if update.region is not None: db_channel.region = update.region
     db.commit()
     db.refresh(db_channel)
     return db_channel
@@ -782,6 +784,32 @@ def admin_promote(user_id: int, db: Session = Depends(get_db), current_user: mod
     user = db.query(models.User).filter(models.User.id == user_id).first()
     user.is_admin = True; db.commit()
     return {"message": "OK"}
+
+@app.post("/api/admin/promote-creator/{user_id}")
+def admin_promote_creator(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    if not current_user.is_admin: raise HTTPException(status_code=403)
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user: raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    existing_channel = db.query(models.Channel).filter(models.Channel.owner_id == user.id).first()
+    if existing_channel:
+        raise HTTPException(status_code=400, detail="L'utilisateur possède déjà une chaîne")
+        
+    new_channel = models.Channel(
+        name=f"Chaîne de {user.username}",
+        phone="",
+        owner_name=user.username,
+        amount="",
+        payment_method="Mobile Money",
+        auth_word="qwerty237",
+        owner_id=user.id,
+        category_id=None,
+        region=None
+    )
+    db.add(new_channel)
+    db.commit()
+    db.refresh(new_channel)
+    return {"message": "OK", "channel_id": new_channel.id}
 
 @app.post("/api/admin/demote/{user_id}")
 def admin_demote(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):

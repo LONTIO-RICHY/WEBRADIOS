@@ -18,6 +18,11 @@ class User(Base):
     comments = relationship("Comment", back_populates="user")
     channels = relationship("Channel", back_populates="owner")
 
+    @property
+    def is_creator(self) -> bool:
+        return len(self.channels) > 0
+
+
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

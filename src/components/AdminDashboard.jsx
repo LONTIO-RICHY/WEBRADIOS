@@ -179,6 +179,18 @@ const AdminDashboard = () => {
         } catch (err) { toast.error("Erreur rétrogradation"); }
     };
 
+    const handlePromoteCreator = async (id) => {
+        try {
+            await api.post(`/api/admin/promote-creator/${id}`, {}, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+            fetchUsers();
+            fetchChannels();
+            fetchStats();
+            toast.success("Utilisateur promu Créateur de chaîne");
+        } catch (err) {
+            toast.error(err.response?.data?.detail || "Erreur promotion créateur");
+        }
+    };
+
     const deleteUser = async (id) => {
         if (!window.confirm("Supprimer cet utilisateur ?")) return;
         try {
@@ -479,14 +491,20 @@ const AdminDashboard = () => {
                                                 <td className="p-6"><p className="font-black text-[#1A1A18] uppercase tracking-tight">{u.username}</p></td>
                                                 <td className="p-6 text-sm font-medium text-slate-500">{u.email}</td>
                                                 <td className="p-6">
-                                                    {u.is_admin ? <span className="bg-[#FFF3EC] text-[#D4480A] px-3 py-1 rounded-full text-[10px] font-black border border-orange-100">ADMIN</span> : <span className="bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[10px] font-black">USER</span>}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {u.is_admin ? <span className="bg-[#FFF3EC] text-[#D4480A] px-3 py-1 rounded-full text-[10px] font-black border border-orange-100">ADMIN</span> : <span className="bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[10px] font-black">USER</span>}
+                                                        {u.is_creator && <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black border border-emerald-100">CRÉATEUR</span>}
+                                                    </div>
                                                 </td>
                                                 <td className="p-6">
                                                     <div className="flex gap-2">
                                                         {u.username !== currentUser.username && (
                                                             <>
-                                                                {u.is_admin ? <button onClick={() => handleDemote(u.id)} className="p-3 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all"><UserMinus size={16} /></button> : <button onClick={() => handlePromote(u.id)} className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"><UserPlus size={16} /></button>}
-                                                                <button onClick={() => deleteUser(u.id)} className="p-3 bg-red-50 text-[#C0392B] rounded-xl hover:bg-[#C0392B] hover:text-white transition-all"><Trash2 size={16} /></button>
+                                                                {u.is_admin ? <button onClick={() => handleDemote(u.id)} className="p-3 bg-orange-50 text-orange-600 rounded-xl hover:bg-orange-600 hover:text-white transition-all" title="Révoquer droits Admin"><UserMinus size={16} /></button> : <button onClick={() => handlePromote(u.id)} className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all" title="Promouvoir Admin"><UserPlus size={16} /></button>}
+                                                                {!u.is_creator && (
+                                                                    <button onClick={() => handlePromoteCreator(u.id)} className="p-3 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition-all" title="Nommer Créateur de chaîne"><Radio size={16} /></button>
+                                                                )}
+                                                                <button onClick={() => deleteUser(u.id)} className="p-3 bg-red-50 text-[#C0392B] rounded-xl hover:bg-[#C0392B] hover:text-white transition-all" title="Supprimer l'utilisateur"><Trash2 size={16} /></button>
                                                             </>
                                                         )}
                                                     </div>

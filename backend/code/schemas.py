@@ -12,6 +12,7 @@ class UserResponse(BaseModel):
     username: str
     email: str
     is_admin: bool
+    is_creator: bool = False
 
     class Config:
         from_attributes = True
@@ -57,16 +58,17 @@ class ChannelCreate(BaseModel):
 class ChannelUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
+    owner_name: str | None = None
     category_id: int | None = None
     region: str | None = None
 
 class ChannelResponse(BaseModel):
     id: int
     name: str
-    phone: str
-    owner_name: str
-    amount: str
-    payment_method: str
+    phone: str | None = None
+    owner_name: str | None = None
+    amount: str | None = None
+    payment_method: str | None = None
     owner_id: int
     category_id: int | None = None
     region: str | None = None

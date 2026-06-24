@@ -1,4 +1,5 @@
 import { Button } from "./components/Button";
+import { BackButton } from "./components/BackButton";
 import { react } from "react";
 //uvicorn main:app --reload
 
@@ -23,8 +24,8 @@ import CommentairesPage from "./components/CommentairesPage";
 
 
 
-import { AuthProvider } from "./context/AuthContext";
-import { AudioProvider } from "./context/AudioContext";
+import { AuthProvider } from "./context/AuthProvider";
+import { AudioProvider } from "./context/AudioProvider";
 import { Toaster } from "react-hot-toast";
 import AdminDashboard from "./components/AdminDashboard";
 import ChannelDashboard from "./components/ChannelDashboard";
@@ -39,6 +40,7 @@ function App() {
         <Toaster position="top-right" />
         <div className="w-full min-h-screen flex flex-col bg-[#F5F2EE]">    
           <Button /> 
+          <BackButton />
 
           <main className="flex-grow">
             <Routes>

@@ -38,8 +38,8 @@ function Studio() {
 
   const audioRef = useRef(null); // Lecteur invisible pour les MP3
   const socketRef = useRef(null);
-  const processorRef = useRef(null);
   const streamRef = useRef(null); 
+  const mediaRecorderRef = useRef(null);
 
   // Fonction pour basculer la lecture d'une piste dans le studio
   const toggleTrackPreview = async (track) => {
@@ -213,9 +213,9 @@ function Studio() {
               return false;
           }
           return true;
-      } catch (e) {
-          return true; // En cas d'erreur API, on laisse passer
-      }
+       } catch {
+           return true; // En cas d'erreur API, on laisse passer
+       }
   };
 
   // DÉMARRER LA DIFFUSION

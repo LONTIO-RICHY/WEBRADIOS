@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; // 1. On importe axios
-import { Corps } from "./Corps";
-import { Emission } from "./Emission";
+
 
 function Pageconnexion() {
   const navigate = useNavigate();

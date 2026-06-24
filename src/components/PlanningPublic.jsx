@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../Api";
-import { Calendar, Clock, Radio, Play, ChevronRight, Music } from "lucide-react";
+import { Calendar, Clock, Music } from "lucide-react";
 
 const PlanningPublic = () => {
     const [planning, setPlanning] = useState([]);
@@ -24,14 +24,14 @@ const PlanningPublic = () => {
         if (!dateStr) return "Heure inconnue";
         try {
             return new Date(dateStr).toLocaleTimeString([], { hour: '2h', minute: '2h' });
-        } catch (e) { return "Heure invalide"; }
+        } catch { return "Heure invalide"; }
     };
 
     const formatDate = (dateStr) => {
         if (!dateStr) return "Date inconnue";
         try {
             return new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-        } catch (e) { return "Date invalide"; }
+        } catch { return "Date invalide"; }
     };
 
     // Grouper par date avec sécurité
