@@ -151,5 +151,9 @@ class BroadcastSlotResponse(BroadcastSlotBase):
 # LA LIGNE MAGIQUE : Force la reconstruction du modèle pour Python 3.14+
 CommentResponse.model_rebuild()
 
+class AIQuestion(BaseModel):
+    question: str
 
-
+class AISummaryResponse(BaseModel):
+    summary: str
+    file_url: str

@@ -16,7 +16,23 @@ from database import engine, get_db
 # Crée les tables
 models.Base.metadata.create_all(bind=engine)
 
+def load_manual_env():
+    import os
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip("'\"")
+                    os.environ[key] = value
+
+load_manual_env()
+
 app = FastAPI()
+
 
 # --- CONFIGURATION ET CONSTANTES ---
 UPLOAD_DIR = "uploads"
@@ -261,6 +277,23 @@ manager = ConnectionManager()
 async def websocket_endpoint(websocket: WebSocket, channel_id: int, role: str = "listener", db: Session = Depends(get_db)):
     is_broadcaster = (role == "broadcaster")
     
+    if is_broadcaster:
+        # Règle d'accès d'antenne :
+        # Si la chaîne possède des créneaux dans le planning, elle ne peut diffuser que pendant un de ses créneaux actifs.
+        # Si elle n'a aucune planification, elle peut diffuser librement.
+        has_planning = db.query(models.BroadcastSlot).filter(models.BroadcastSlot.channel_id == channel_id).first() is not None
+        if has_planning:
+            now = datetime.now()
+            current_slot = db.query(models.BroadcastSlot).filter(
+                models.BroadcastSlot.channel_id == channel_id,
+                models.BroadcastSlot.start_time <= now,
+                models.BroadcastSlot.end_time >= now
+            ).first()
+            if not current_slot:
+                await websocket.accept()
+                await websocket.close(code=4003)
+                return
+
     await manager.connect(websocket, channel_id, is_broadcaster)
     try:
         while True:
@@ -400,7 +433,7 @@ def delete_category(id: int, db: Session = Depends(get_db), current_user: models
 # CHANNELS
 @app.post("/api/channels", response_model=schemas.ChannelResponse)
 def create_channel(channel: schemas.ChannelCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    if channel.auth_word != "qwerty237":
+    if channel.auth_word != "RICHY":
         raise HTTPException(status_code=400, detail="Mot d'authentification incorrect")
     new_channel = models.Channel(**channel.dict(exclude={"auth_word"}), owner_id=current_user.id, auth_word=channel.auth_word)
     db.add(new_channel)
@@ -419,7 +452,10 @@ def get_all_channels(category_id: int = None, region: str = None, db: Session = 
 
 @app.get("/api/my-channels", response_model=List[schemas.ChannelResponse])
 def get_my_channels(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    return db.query(models.Channel).filter(models.Channel.owner_id == current_user.id).all()
+    return db.query(models.Channel).filter(
+        models.Channel.owner_id == current_user.id,
+        models.Channel.payment_method != "Import"
+    ).all()
 
 @app.get("/api/channels/{channel_id}", response_model=schemas.ChannelResponse)
 def get_channel(channel_id: int, db: Session = Depends(get_db)):
@@ -801,7 +837,7 @@ def admin_promote_creator(user_id: int, db: Session = Depends(get_db), current_u
         owner_name=user.username,
         amount="",
         payment_method="Mobile Money",
-        auth_word="qwerty237",
+        auth_word="RICHY",
         owner_id=user.id,
         category_id=None,
         region=None
@@ -1061,3 +1097,176 @@ def get_comments(emission_id: int = None, channel_id: int = None, db: Session = 
         "emission_id": c.emission_id,
         "channel_id": c.channel_id
     } for c in comments]
+
+# --- INTEGRATION IA GATUIT (GEMINI API / FALLBACK INTERNE) ---
+
+async def call_gemini_api(prompt: str) -> str:
+    import os
+    import httpx
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key or api_key.strip() in ("", "undefined", "null"):
+        prompt_lower = prompt.lower()
+        if "streaming en direct" in prompt_lower or "comment créer un streaming" in prompt_lower:
+            return (
+                "ℹ️ **[Mode Démo - GEMINI_API_KEY non configurée]**\n\n"
+                "Pour créer un streaming en direct sur **LUKOLIVE** :\n"
+                "1. Connectez-vous à votre compte et assurez-vous d'avoir créé une chaîne.\n"
+                "2. Accédez à votre **Studio** (console de diffusion).\n"
+                "3. Configurez votre logiciel de diffusion (ex: OBS Studio, Butt ou Mixxx) avec l'URL du serveur de streaming et la clé de diffusion de votre émission.\n"
+                "4. Lancez la diffusion depuis votre logiciel, puis cliquez sur 'Lancer le Direct' dans le Studio LUKOLIVE."
+            )
+        elif "créer une chaîne" in prompt_lower or "créer une chaines" in prompt_lower:
+            return (
+                "ℹ️ **[Mode Démo - GEMINI_API_KEY non configurée]**\n\n"
+                "Pour créer une chaîne sur **LUKOLIVE** :\n"
+                "1. Allez sur la page d'accueil ou l'onglet 'Chaines'.\n"
+                "2. Remplissez le formulaire de création de chaîne (Nom de la chaîne, Téléphone, Nom du propriétaire, Montant et Méthode de paiement).\n"
+                "3. Choisissez votre mot d'authentification et votre catégorie.\n"
+                "4. Validez le formulaire. Une fois créée, vous serez redirigé vers le Dashboard de votre chaîne pour y ajouter vos émissions."
+            )
+        elif "bibliothèque" in prompt_lower or "sauvegarder" in prompt_lower:
+            return (
+                "ℹ️ **[Mode Démo - GEMINI_API_KEY non configurée]**\n\n"
+                "Pour ajouter du contenu à votre bibliothèque :\n"
+                "1. Parcourez les émissions ou musiques sur la plateforme.\n"
+                "2. Cliquez sur l'icône de téléchargement ou de sauvegarde (favori).\n"
+                "3. Retrouvez tous vos contenus sauvegardés à tout moment dans l'onglet **'Ma Bibliothèque'** pour une écoute rapide !"
+            )
+        elif "conseils" in prompt_lower or "inspiration" in prompt_lower:
+            return (
+                "ℹ️ **[Mode Démo - GEMINI_API_KEY non configurée]**\n\n"
+                "Voici quelques conseils et inspirations pour animer votre chaîne :\n"
+                "1. **Connaissez votre cible** : Parlez des réalités locales camerounaises, utilisez des expressions engageantes.\n"
+                "2. **Qualité audio** : Utilisez un micro USB correct et parlez dans une pièce sans écho.\n"
+                "3. **Régularité** : Définissez des créneaux horaires réguliers pour fidéliser vos auditeurs.\n"
+                "4. **Interaction** : Encouragez vos auditeurs à laisser des commentaires sous vos émissions sur LUKOLIVE."
+            )
+        else:
+            return (
+                "👋 **Bienvenue sur l'Assistant IA de LUKOLIVE !**\n\n"
+                "*(Note pour le développeur : Pour activer l'IA intelligente de Gemini, veuillez configurer la variable d'environnement `GEMINI_API_KEY` dans votre backend.)*\n\n"
+                "Je suis ici pour vous guider. Voici ce que je peux faire :\n"
+                "- Répondre à vos questions sur l'utilisation de la plateforme.\n"
+                "- Vous guider pour créer des chaînes et des lives.\n"
+                "- Proposer des conseils d'animation.\n\n"
+                "Posez-moi une question ci-dessous ou cliquez sur l'une des questions suggérées !"
+            )
+            
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                text = data['candidates'][0]['content']['parts'][0]['text']
+                return text
+            else:
+                return f"⚠️ Erreur lors de l'appel à l'API Gemini (Code {response.status_code}) : {response.text}"
+    except Exception as e:
+        return f"⚠️ Une exception est survenue lors de la communication avec l'IA : {str(e)}"
+
+@app.post("/api/ai/chat")
+async def ai_chat(question_payload: schemas.AIQuestion, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_creator = db.query(models.Channel).filter(models.Channel.owner_id == current_user.id).first() is not None
+    role_str = "administrateur" if current_user.is_admin else ("créateur de chaîne" if is_creator else "utilisateur régulier")
+    prompt = (
+        f"Tu es l'assistant IA de la plateforme LUKOLIVE (streaming audio et gestion d'émissions au Cameroun).\n"
+        f"L'utilisateur connecté s'appelle '{current_user.username}' et a le rôle '{role_str}'.\n"
+        f"Il pose la question suivante : {question_payload.question}\n\n"
+        f"Réponds de manière concise, chaleureuse et structurée en français. Aide-le dans le cadre de LUKOLIVE."
+    )
+    answer = await call_gemini_api(prompt)
+    return {"response": answer}
+
+@app.post("/api/ai/recommendations")
+async def ai_recommendations(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    favs = db.query(models.Favorite).filter(models.Favorite.user_id == current_user.id).all()
+    saved = db.query(models.SavedTrack).filter(models.SavedTrack.user_id == current_user.id).all()
+    categories = db.query(models.Category).all()
+    
+    fav_channels = [f.channel.name for f in favs if f.channel]
+    saved_items = []
+    for s in saved:
+        if s.emission:
+            saved_items.append(f"Émission: {s.emission.title}")
+        elif s.track:
+            saved_items.append(f"Musique: {s.track.title}")
+            
+    cats_str = ", ".join([c.name for c in categories])
+    interests_str = ", ".join(fav_channels + saved_items)
+    
+    prompt = (
+        f"Tu es l'assistant IA de la plateforme LUKOLIVE au Cameroun.\n"
+        f"L'utilisateur s'appelle '{current_user.username}'.\n"
+        f"Ses intérêts actuels sur notre plateforme (chaînes favorites ou émissions sauvegardées) sont : {interests_str or 'Aucun contenu favori ou sauvegardé pour le moment'}.\n"
+        f"Voici la liste complète des catégories disponibles sur LUKOLIVE : {cats_str}.\n\n"
+        f"Recommande-lui de manière ciblée et enthousiaste 2 ou 3 catégories d'émissions et donne-lui des idées de thèmes d'écoute basés sur ses préférences. Utilise des émojis et sois concis."
+    )
+    
+    answer = await call_gemini_api(prompt)
+    return {"response": answer}
+
+@app.post("/api/ai/inspiration")
+async def ai_inspiration(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    is_creator = db.query(models.Channel).filter(models.Channel.owner_id == current_user.id).first() is not None
+    role_str = "créateur de chaîne" if is_creator else "utilisateur régulier"
+    prompt = (
+        f"Tu es un consultant IA expert en podcasts et programmation radio pour la plateforme LUKOLIVE au Cameroun.\n"
+        f"L'utilisateur connecté s'appelle '{current_user.username}' et a le rôle '{role_str}'.\n"
+        f"Donne-lui 3 idées d'émissions originales inspirées de la culture camerounaise ou 3 conseils d'animation radio impactants pour son profil.\n"
+        f"Sois dynamique, structuré et inspirant."
+    )
+    answer = await call_gemini_api(prompt)
+    return {"response": answer}
+
+@app.post("/api/ai/summarize/{emission_id}", response_model=schemas.AISummaryResponse)
+async def ai_summarize_emission(emission_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    emission = db.query(models.Emission).filter(models.Emission.id == emission_id).first()
+    if not emission:
+        raise HTTPException(status_code=404, detail="Émission non trouvée.")
+        
+    comments = db.query(models.Comment).filter(models.Comment.emission_id == emission_id).all()
+    comments_str = "\n".join([f"- {c.user.username}: {c.content}" for c in comments])
+    category_name = emission.category.name if emission.category else "Non spécifiée"
+    channel_name = emission.channel.name if emission.channel else "Non spécifiée"
+    
+    prompt = (
+        f"Tu es l'assistant IA de LUKOLIVE.\n"
+        f"Rédige un résumé textuel structuré, clair et captivant pour l'émission suivante :\n"
+        f"Titre : {emission.title}\n"
+        f"Description : {emission.description or 'Aucune'}\n"
+        f"Catégorie : {category_name}\n"
+        f"Chaîne d'origine : {channel_name}\n"
+        f"Commentaires des auditeurs :\n{comments_str or 'Aucun commentaire.'}\n\n"
+        f"Le résumé doit faire environ 150-250 mots, être bien structuré avec des points clés."
+    )
+    
+    summary_text = await call_gemini_api(prompt)
+    
+    # Écriture du résumé dans un fichier texte dans le dossier uploads
+    summary_dir = os.path.join(UPLOAD_DIR, "summaries")
+    os.makedirs(summary_dir, exist_ok=True)
+    file_name = f"summary_emission_{emission_id}.txt"
+    file_path = os.path.join(summary_dir, file_name)
+    
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(summary_text)
+        
+    file_url = f"/uploads/summaries/{file_name}"
+    
+    return {"summary": summary_text, "file_url": file_url}
+

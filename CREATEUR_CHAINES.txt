@@ -1,0 +1,99 @@
+@startuml
+autonumber
+skinparam handwritten false
+skinparam shadowing true
+
+' Définition des participants
+actor "Créateur Chaînes" as Creator
+participant "Frontend (React)" as FE
+participant "Backend (FastAPI)" as BE
+database "Base de Données (SQLite)" as DB
+
+== Phase 1 : Accès au Studio & Chargement des Médias ==
+
+Creator -> FE : Ouvre la console "Studio"
+activate FE
+FE -> BE : GET /api/my-channels (Demander mes chaînes créées) avec Token JWT
+activate BE
+BE -> DB : Rechercher dans la table Channel (owner_id == user_id)
+activate DB
+DB --> BE : Liste des chaînes
+deactivate DB
+BE --> FE : Retourne les chaînes (HTTP 200)
+deactivate BE
+
+FE -> BE : GET /api/my-tracks (Demander mes pistes audio chargées)
+activate BE
+BE -> DB : Rechercher dans la table Track (user_id == user_id)
+activate DB
+DB --> BE : Liste des pistes audio (Tracks)
+deactivate DB
+BE --> FE : Retourne les pistes audio (HTTP 200)
+deactivate BE
+FE --> Creator : Affiche la console Studio avec ses chaînes et sa bibliothèque audio
+deactivate FE
+
+== Phase 2 : Importation de Médias & Publication d'Émissions ==
+
+' Téléverser une piste audio
+Creator -> FE : Téléverse un fichier audio (.mp3)
+activate FE
+FE -> BE : POST /api/upload (Fichier audio dans form-data)
+activate BE
+BE -> BE : Enregistrer le fichier physiquement dans 'uploads/'
+BE -> DB : Créer l'enregistrement dans la table Track
+activate DB
+DB --> BE : Piste audio enregistrée avec ID et URL
+deactivate DB
+BE --> FE : Retourne le TrackResponse (HTTP 201)
+deactivate BE
+FE --> Creator : Affiche la piste audio ajoutée dans la bibliothèque
+deactivate FE
+
+' Créer une émission
+Creator -> FE : Remplit le formulaire et crée une émission
+activate FE
+FE -> BE : POST /api/emissions (Données de l'émission, ID de piste)
+activate BE
+BE -> DB : Insérer l'enregistrement dans la table Emission (is_live=False par défaut)
+activate DB
+DB --> BE : Émission créée en base
+deactivate DB
+BE --> FE : Retourne l'EmissionResponse (HTTP 201)
+deactivate BE
+FE --> Creator : Affiche l'émission créée dans la liste
+deactivate FE
+
+== Phase 3 : Lancement et Arrêt du Direct (WebSockets) ==
+
+' Lancement du streaming
+Creator -> FE : Clique sur "Démarrer le Direct" dans le Studio
+activate FE
+FE -> BE : Connexion WebSocket sur /ws/stream/{channel_id}?role=broadcaster
+activate BE
+BE -> BE : manager.connect(websocket, channel_id, is_broadcaster=True)
+BE --> FE : WebSocket connecté (Prêt pour la diffusion)
+
+' Envoi du flux audio
+loop Pendant toute la durée du live
+    FE -> BE : Envoi des paquets audio binaires (websocket.send_bytes)
+    BE -> BE : manager.broadcast_audio(data, channel_id) vers tous les auditeurs connectés
+end
+
+' Arrêt du streaming
+Creator -> FE : Clique sur "Arrêter le Direct"
+FE -> BE : POST /api/emissions/{emission_id}/stop (Demande d'arrêt de l'émission)
+BE -> DB : Mettre à jour models.Emission (is_live = False)
+activate DB
+DB --> BE : Données sauvegardées
+deactivate DB
+BE --> FE : Réponse {"status": "stopped"} (HTTP 200)
+
+FE -> BE : Fermeture de la connexion WebSocket
+BE -> BE : manager.disconnect(websocket, channel_id)
+BE --> FE : WebSocket déconnecté
+deactivate BE
+FE --> Creator : Affiche le statut "Hors ligne" et arrête la captation audio
+deactivate FE
+
+@enduml

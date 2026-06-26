@@ -1,0 +1,42 @@
+@startuml
+autonumber
+skinparam handwritten false
+skinparam shadowing true
+
+' Définition des participants
+actor "Visiteur" as Visitor
+participant "Frontend (React)" as FE
+participant "Backend (FastAPI)" as BE
+database "Base de Données (SQLite)" as DB
+
+== Navigation & Consultation des Catégories ==
+
+Visitor -> FE : Accède à la plateforme (Page d'accueil)
+activate FE
+FE -> BE : GET /api/categories (Demande les catégories disponibles)
+activate BE
+BE -> DB : Récupérer toutes les catégories actives
+activate DB
+DB --> BE : Liste des catégories
+deactivate DB
+BE --> FE : Données des catégories et chaînes publiques
+deactivate BE
+FE --> Visitor : Affiche la page d'accueil avec les catégories
+deactivate FE
+
+== Recherche de Contenu (Chaînes & Émissions) ==
+
+Visitor -> FE : Saisit un mot-clé dans la barre de recherche
+activate FE
+FE -> BE : GET /api/search?q={mot_cle} (Rechercher chaînes/émissions)
+activate BE
+BE -> DB : Recherche (LIKE SQL) dans les tables Channel et Emission
+activate DB
+DB --> BE : Liste des correspondances trouvées
+deactivate DB
+BE --> FE : Résultats de la recherche
+deactivate BE
+FE --> Visitor : Affiche la liste filtrée des chaînes et émissions
+deactivate FE
+
+@enduml

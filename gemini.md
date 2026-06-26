@@ -31,6 +31,7 @@ Plateforme de streaming audio et de gestion d'émissions (podcasts et radio en l
 - [x] Badge "En Direct" synchronisé avec le backend.
 - [x] Notifications systèmes pour chaque action importante.
 - [x] Bibliothèque audio personnelle et console de diffusion.
+- [x] Assistant IA intégré (LukoIA) avec conseils, inspirations, recommandations et résumés d'émissions en fichiers texte.
 
 ## 6. CHARTE GRAPHIQUE (v1.0 — Corail Brûlé)
 Migration terminée : palette chaude, ombres orange, boutons arrondis, style moderne et local.

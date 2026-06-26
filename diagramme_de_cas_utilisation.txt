@@ -1,0 +1,80 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam handwritten false
+skinparam shadowing true
+skinparam actorStyle awesome
+
+' Définition des acteurs (placés à gauche et à droite pour équilibrer la largeur et éviter les croisements)
+actor "Visiteur" as Visitor
+actor "Utilisateur\n(Avec Compte)" as User
+
+actor "Créateur Chaînes" as Creator
+actor "Admin de la\nPlateforme" as Admin
+actor "Assistant LukoIA" as AI
+
+rectangle "Plateforme WebRadios & Podcasts (Cameroun)" {
+    
+    ' Colonne 1 : Pour le Visiteur et l'Utilisateur
+    usecase "S'authentifier\n(Inscription/Connexion)" as UC_Auth
+    usecase "Écouter un flux\naudio en direct" as UC_Listen
+    usecase "Rechercher des\nchaînes & émissions" as UC_Search
+    usecase "Consulter les\ncatégories d'émissions" as UC_Categories
+    usecase "Gérer ses favoris" as UC_Fav
+    usecase "Laisser des commentaires\nsur les émissions/chaînes" as UC_Comment
+    usecase "Interagir avec\nl'assistant LukoIA" as UC_InteractAI
+    
+    ' Colonne 2 : Pour le Créateur, l'Admin et l'IA
+    usecase "Accéder au Studio\n(Console de diffusion)" as UC_Studio
+    usecase "Démarrer/Arrêter une\némission en direct" as UC_Live
+    usecase "Gérer sa bibliothèque\naudio personnelle" as UC_Library
+    usecase "Créer et gérer\nses émissions" as UC_ManageEmissions
+    usecase "Gérer la plateforme\n(Utilisateurs & Rôles)" as UC_ManagePlatform
+    usecase "Modérer le contenu\n(Commentaires/Chaînes)" as UC_Moderate
+    usecase "Obtenir des résumés\nd'émissions par l'IA" as UC_Summarize
+    usecase "Recevoir des\nrecommandations d'écoute" as UC_Recommend
+}
+
+' --- ALIGNEMENT DES COLONNES EN GRILLE (Format Carré) ---
+UC_Auth -[hidden]right-> UC_Studio
+UC_Listen -[hidden]right-> UC_Live
+UC_Search -[hidden]right-> UC_Library
+UC_Categories -[hidden]right-> UC_ManageEmissions
+UC_Fav -[hidden]right-> UC_ManagePlatform
+UC_Comment -[hidden]right-> UC_Moderate
+UC_InteractAI -[hidden]right-> UC_Summarize
+UC_Summarize -[hidden]down-> UC_Recommend
+
+' --- HÉRITAGE DES ACTEURS ---
+' Héritage à gauche
+User -up-|> Visitor
+
+' Héritage traversant (droite vers gauche)
+Creator -left-|> User
+Admin -left-|> User
+
+' --- LIENS ACTEURS GAUCHE -> COLONNE 1 ---
+Visitor --> UC_Auth
+Visitor --> UC_Listen
+Visitor --> UC_Search
+Visitor --> UC_Categories
+
+User --> UC_Fav
+User --> UC_Comment
+User --> UC_InteractAI
+
+' --- LIENS ACTEURS DROITE -> COLONNE 2 ---
+UC_Studio <-- Creator
+UC_Live <-- Creator
+UC_Library <-- Creator
+UC_ManageEmissions <-- Creator
+
+UC_ManagePlatform <-- Admin
+UC_Moderate <-- Admin
+
+' --- LIENS ASSISTANT IA ---
+UC_InteractAI <-- AI
+UC_Summarize <-- AI
+UC_Recommend <-- AI
+
+@enduml

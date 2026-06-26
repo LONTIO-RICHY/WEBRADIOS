@@ -35,7 +35,7 @@ export default function ChainesGauche() {
             })
           ]);
           setMesChaines(resMy.data);
-          setMesFavoris(resFavs.data);
+          setMesFavoris(resFavs.data.filter(c => (c.payment_method || "").toLowerCase().trim() !== "import"));
         }
       } catch (err) {
         console.error("Erreur chargement des chaînes", err);
@@ -46,9 +46,9 @@ export default function ChainesGauche() {
     fetchChannels();
   }, [user]);
 
-  const filteredChannels = toutesLesChaines.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredChannels = toutesLesChaines
+    .filter(c => (c.payment_method || "").toLowerCase().trim() !== "import")
+    .filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="flex flex-col h-screen bg-[#F5F2EE] border-r border-slate-200">
@@ -92,23 +92,25 @@ export default function ChainesGauche() {
         ) : (
           <>
             {/* Mes Chaînes Créées */}
-            {user && mesChaines.length > 0 && (
+            {user && mesChaines.filter(c => (c.payment_method || "").toLowerCase().trim() !== "import").length > 0 && (
               <div className="animate-in fade-in slide-in-from-left-4 duration-500">
                 <p className="px-2 mb-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Mes Propriétés</p>
                 <div className="space-y-2">
-                  {mesChaines.map((c) => (
-                    <Link to={`/ChannelDashboard/${c.id}`} key={`my-${c.id}`}>
-                      <div className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border border-orange-100 bg-white hover:shadow-lg hover:shadow-orange-100/50 group">
-                        <div className="w-10 h-10 bg-[#D4480A] rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-110 transition-transform">
-                          {c.name.charAt(0).toUpperCase()}
+                  {mesChaines
+                    .filter(c => (c.payment_method || "").toLowerCase().trim() !== "import")
+                    .map((c) => (
+                      <Link to={`/ChannelDashboard/${c.id}`} key={`my-${c.id}`}>
+                        <div className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all border border-orange-100 bg-white hover:shadow-lg hover:shadow-orange-100/50 group">
+                          <div className="w-10 h-10 bg-[#D4480A] rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-md group-hover:scale-110 transition-transform">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-[#1A1A18] truncate">{c.name}</p>
+                            <p className="text-[10px] text-[#D4480A] font-black tracking-widest uppercase">Admin</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-[#1A1A18] truncate">{c.name}</p>
-                          <p className="text-[10px] text-[#D4480A] font-black tracking-widest uppercase">Admin</p>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))}
                 </div>
               </div>
             )}

@@ -327,6 +327,19 @@ function Studio() {
           stopEmission();
       };
 
+      socket.onclose = (event) => {
+          console.log("Studio : WebSocket fermé", event);
+          if (socketRef.current) {
+              socketRef.current = null;
+              if (event.code === 4003) {
+                  toast.error("Vous n'êtes pas programmé pour diffuser en direct actuellement.");
+              } else {
+                  toast.info("Connexion de diffusion coupée.");
+              }
+              stopEmission();
+          }
+      };
+
     } catch (error) {
       console.error("Studio : Erreur globale", error);
       toast.error("Échec du lancement.");

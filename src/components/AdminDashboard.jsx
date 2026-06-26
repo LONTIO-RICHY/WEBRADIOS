@@ -30,6 +30,7 @@ const AdminDashboard = () => {
     // État pour la gestion du contenu d'une chaîne spécifique
     const [viewChannelContent, setViewChannelContent] = useState(null);
     const [channelEmissions, setChannelEmissions] = useState([]);
+    const [isManualTrack, setIsManualTrack] = useState(false);
 
     const CAMEROON_REGIONS = [
         "Adamaoua", "Centre", "Est", "Extrême-Nord", "Littoral", "Nord", "Nord-Ouest", "Ouest", "Sud", "Sud-Ouest"
@@ -47,9 +48,14 @@ const AdminDashboard = () => {
         fetchTracks();
         fetchCategories();
         fetchPlanning();
-    }, [currentUser, navigate]);
+    }, [currentUser, navigate, activeTab]);
+
+    if (!currentUser || !currentUser.is_admin) {
+        return null;
+    }
 
     const fetchPlanning = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/planning", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setPlanning(res.data);
@@ -68,6 +74,7 @@ const AdminDashboard = () => {
                 track_info: newSlot.track_info
             }, { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setNewSlot({ channel_id: "", date: "", start: "", end: "", track_info: "" });
+            setIsManualTrack(false);
             fetchPlanning();
             toast.success("Créneau ajouté au planning");
         } catch (err) { toast.error("Erreur lors de l'ajout du créneau"); }
@@ -83,6 +90,7 @@ const AdminDashboard = () => {
     };
 
     const fetchCategories = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/categories", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setCategories(res.data);
@@ -120,6 +128,7 @@ const AdminDashboard = () => {
     };
 
     const fetchStats = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/stats", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setStats(res.data);
@@ -127,6 +136,7 @@ const AdminDashboard = () => {
     };
 
     const fetchUsers = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/users", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setUsers(res.data);
@@ -134,6 +144,7 @@ const AdminDashboard = () => {
     };
 
     const fetchChannels = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/channels", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setChannels(res.data);
@@ -141,6 +152,7 @@ const AdminDashboard = () => {
     };
 
     const fetchEmissions = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/emissions", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setEmissions(res.data);
@@ -148,6 +160,7 @@ const AdminDashboard = () => {
     };
 
     const fetchTracks = async () => {
+        if (!currentUser?.token) return;
         try {
             const res = await api.get("/api/admin/tracks", { headers: { Authorization: `Bearer ${currentUser.token}` } });
             setTracks(res.data);
@@ -670,15 +683,42 @@ const AdminDashboard = () => {
                             <form onSubmit={addSlot} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-8 bg-[#F5F2EE] rounded-3xl border border-slate-100 items-end">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Chaîne</label>
-                                    <select className="w-full p-4 rounded-2xl outline-none font-bold text-sm appearance-none bg-white" value={newSlot.channel_id} onChange={(e) => setNewSlot({...newSlot, channel_id: e.target.value})} required>
-                                        <option value="">Sélectionner...</option>
-                                        {channels.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    <select className="w-full p-4 rounded-2xl outline-none font-bold text-sm bg-white border border-slate-200" value={newSlot.channel_id} onChange={(e) => {
+                                        setNewSlot({...newSlot, channel_id: e.target.value, track_info: ""});
+                                        setIsManualTrack(false);
+                                    }} required>
+                                        <option value="">Sélectionner une chaîne...</option>
+                                        {[...channels]
+                                            .filter(c => (c.payment_method || "").toLowerCase().trim() !== "import")
+                                            .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                                            .map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                                        }
                                     </select>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Titre de l'Audio / Émission</label>
-                                    <input type="text" placeholder="Ex: Playlist Zouk" className="w-full p-4 rounded-2xl outline-none font-bold text-sm bg-white" value={newSlot.track_info} onChange={(e) => setNewSlot({...newSlot, track_info: e.target.value})} required />
-                                </div>
+                                {newSlot.channel_id && emissions.filter(em => em.channel_id === parseInt(newSlot.channel_id)).length > 0 && !isManualTrack ? (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center ml-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase">Émission de la chaîne</label>
+                                            <button type="button" onClick={() => { setIsManualTrack(true); setNewSlot({...newSlot, track_info: ""}); }} className="text-[9px] font-black text-[#D4480A] uppercase hover:underline">Saisir manuellement</button>
+                                        </div>
+                                        <select className="w-full p-4 rounded-2xl outline-none font-bold text-sm bg-white border border-slate-200" value={newSlot.track_info} onChange={(e) => setNewSlot({...newSlot, track_info: e.target.value})} required>
+                                            <option value="">Sélectionner une émission...</option>
+                                            {emissions.filter(em => em.channel_id === parseInt(newSlot.channel_id)).map(em => (
+                                                <option key={em.id} value={em.title}>{em.title}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center ml-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase">Titre de l'Audio / Émission</label>
+                                            {newSlot.channel_id && emissions.filter(em => em.channel_id === parseInt(newSlot.channel_id)).length > 0 && (
+                                                <button type="button" onClick={() => { setIsManualTrack(false); setNewSlot({...newSlot, track_info: ""}); }} className="text-[9px] font-black text-[#D4480A] uppercase hover:underline">Sélectionner une émission</button>
+                                            )}
+                                        </div>
+                                        <input type="text" placeholder="Ex: Playlist Zouk" className="w-full p-4 rounded-2xl outline-none font-bold text-sm bg-white" value={newSlot.track_info} onChange={(e) => setNewSlot({...newSlot, track_info: e.target.value})} required />
+                                    </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Date</label>
                                     <input type="date" className="w-full p-4 rounded-2xl outline-none font-bold text-sm bg-white" value={newSlot.date} onChange={(e) => setNewSlot({...newSlot, date: e.target.value})} required />

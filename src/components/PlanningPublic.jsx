@@ -23,7 +23,7 @@ const PlanningPublic = () => {
     const formatTime = (dateStr) => {
         if (!dateStr) return "Heure inconnue";
         try {
-            return new Date(dateStr).toLocaleTimeString([], { hour: '2h', minute: '2h' });
+            return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } catch { return "Heure invalide"; }
     };
 

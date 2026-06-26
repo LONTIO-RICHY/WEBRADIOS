@@ -79,7 +79,7 @@ class Channel(Base):
     owner_name = Column(String(100))
     amount = Column(String(50))
     payment_method = Column(String(100))
-    auth_word = Column(String(100), default="qwerty237")
+    auth_word = Column(String(100), default="RICHY")
     owner_id = Column(Integer, ForeignKey("users.id"))
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     region = Column(String(100), nullable=True) # Nouveau : Région du Cameroun

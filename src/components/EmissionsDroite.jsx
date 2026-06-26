@@ -4,7 +4,7 @@
 
 import { useParams } from "react-router-dom";
 import { EMISSIONS } from "./emissions.data";
-import { Play, Calendar, Radio, Heart } from "lucide-react";
+import { Play, Calendar, Radio, Heart, Sparkles } from "lucide-react";
 import CommentSection from "./CommentSection";
 import { useAudio } from "../context/AudioContext";
 import toast from "react-hot-toast";
@@ -30,6 +30,10 @@ export default function EmissionsDroite() {
     } else {
         toast.error("Cette émission n'est pas rattachée à un flux direct.");
     }
+  };
+
+  const handleAiSummary = () => {
+    window.dispatchEvent(new CustomEvent("trigger-ai-summary", { detail: { emissionId: id } }));
   };
 
   return (
@@ -118,12 +122,19 @@ export default function EmissionsDroite() {
                     <Play size={20} strokeWidth={2.5} fill="currentColor" /> 
                     {currentChannelId === e.channel_id && isPlaying ? "EN COURS D'ÉCOUTE" : "ÉCOUTER MAINTENANT"}
                 </button>
-                <div className="grid grid-cols-2 gap-3">
-                    <button className="flex items-center justify-center gap-2 py-4 border-2 border-orange-100 text-[#D4480A] rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-[#FFF3EC] transition-all">
-                        <Radio size={16} strokeWidth={2} /> RAPPEL
+                <div className="grid grid-cols-3 gap-2">
+                    <button className="flex items-center justify-center gap-2 py-4 border-2 border-orange-100 text-[#D4480A] rounded-[2rem] font-black text-[9px] uppercase tracking-widest hover:bg-[#FFF3EC] transition-all">
+                        <Radio size={14} strokeWidth={2} /> RAPPEL
                     </button>
-                    <button className="flex items-center justify-center gap-2 py-4 border-2 border-orange-100 text-[#D4480A] rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-[#FFF3EC] transition-all">
-                        <Heart size={16} strokeWidth={2} /> FAVORIS
+                    <button className="flex items-center justify-center gap-2 py-4 border-2 border-orange-100 text-[#D4480A] rounded-[2rem] font-black text-[9px] uppercase tracking-widest hover:bg-[#FFF3EC] transition-all">
+                        <Heart size={14} strokeWidth={2} /> FAVORIS
+                    </button>
+                    <button 
+                        onClick={handleAiSummary}
+                        className="flex items-center justify-center gap-1 py-4 bg-[#FFF3EC] border-2 border-[#D4480A]/20 text-[#D4480A] rounded-[2rem] font-black text-[9px] uppercase tracking-widest hover:bg-[#FFEBE0] transition-all shadow-sm shadow-orange-100"
+                        title="Générer un résumé textuel par l'IA"
+                    >
+                        <Sparkles size={14} strokeWidth={2} /> RÉSUMÉ IA
                     </button>
                 </div>
             </section>

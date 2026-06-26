@@ -1,0 +1,91 @@
+@startuml
+autonumber
+skinparam handwritten false
+skinparam shadowing true
+
+' Définition des participants
+actor "Admin de la\nPlateforme" as Admin
+participant "Frontend (React)" as FE
+participant "Backend (FastAPI)" as BE
+database "Base de Données (SQLite)" as DB
+participant "LukoIA (Assistant)" as AI
+
+== Phase 1 : Gestion des Rôles & Profils Utilisateurs ==
+
+' Nommer les Administrateurs ou Créateurs de chaînes
+Admin -> FE : Sélectionne un utilisateur et modifie son rôle (ex: promu Admin ou Créateur)
+activate FE
+FE -> BE : PUT /api/admin/users/{user_id}/role (Nouveau rôle: Admin ou Owner)
+activate BE
+BE -> DB : Mettre à jour le rôle (role = 'admin' ou 'owner') en base de données
+activate DB
+DB --> BE : Rôle mis à jour
+deactivate DB
+BE --> FE : HTTP 200 OK (Rôle mis à jour avec succès)
+deactivate BE
+FE --> Admin : Affiche le statut actualisé (Admin / Créateur de chaînes)
+deactivate FE
+
+' Supprimer/Renommer un Utilisateur
+Admin -> FE : Supprime ou modifie (renomme) le compte d'un utilisateur
+activate FE
+FE -> BE : DELETE /api/admin/users/{user_id} (ou PUT /api/admin/users/{user_id})
+activate BE
+BE -> DB : Supprimer l'utilisateur de la base de données (et ses liaisons)
+activate DB
+DB --> BE : Confirmation de l'opération
+deactivate DB
+BE --> FE : HTTP 200 OK (Utilisateur supprimé ou modifié)
+deactivate BE
+FE --> Admin : Supprime l'utilisateur de l'affichage avec un Toast de succès
+deactivate FE
+
+== Phase 2 : Administration des Catégories de Chaînes ==
+
+' Créer / Gérer les catégories
+Admin -> FE : Crée ou supprime une catégorie de chaînes (ex: "Sport", "Débats")
+activate FE
+FE -> BE : POST /api/admin/categories (ou DELETE /api/admin/categories/{cat_id})
+activate BE
+BE -> DB : Ajouter / Supprimer la ligne de catégorie dans la table Category
+activate DB
+DB --> BE : Confirmation en base de données
+deactivate DB
+BE --> FE : Catégorie mise à jour (HTTP 200/201)
+deactivate BE
+FE --> Admin : Met à jour la liste des catégories à l'écran
+deactivate FE
+
+== Phase 3 : Modération des Chaînes & de leur Contenu ==
+
+' Modifier/Renommer ou Supprimer une chaîne
+Admin -> FE : Modifie (renomme) ou supprime une chaîne (ou ses émissions associées)
+activate FE
+FE -> BE : DELETE /api/admin/channels/{channel_id} (ou PUT /api/admin/channels/{channel_id})
+activate BE
+BE -> DB : Supprimer la chaîne et tout son contenu (émissions et commentaires en cascade)
+activate DB
+DB --> BE : Confirmation de la suppression globale
+deactivate DB
+BE --> FE : Chaîne et contenu supprimés (HTTP 200)
+deactivate BE
+FE --> Admin : Met à jour la liste et supprime visuellement le contenu modéré
+deactivate FE
+
+== Phase 4 : Interaction avec l'Assistant LukoIA ==
+
+' Consultation de l'IA par l'Admin
+Admin -> FE : Demande des conseils de modération ou une analyse de statistiques à LukoIA
+activate FE
+FE -> BE : POST /api/lukoia/admin-analysis (Requête IA avec contexte admin)
+activate BE
+BE -> AI : Analyser les données d'activité ou de modération demandées
+activate AI
+AI --> BE : Insights, résumés et recommandations d'action
+deactivate AI
+BE --> FE : Recommandations LukoIA (HTTP 200)
+deactivate BE
+FE --> Admin : Affiche les conseils stratégiques et rapports générés par l'IA
+deactivate FE
+
+@enduml

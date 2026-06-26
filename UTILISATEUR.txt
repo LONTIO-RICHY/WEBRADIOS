@@ -1,0 +1,92 @@
+@startuml
+autonumber
+skinparam handwritten false
+skinparam shadowing true
+
+' Définition des participants
+actor "Utilisateur\n(Avec Compte)" as User
+participant "Frontend (React)" as FE
+participant "Backend (FastAPI)" as BE
+database "Base de Données (SQLite)" as DB
+participant "LukoIA (Assistant)" as AI
+
+== Authentification & Chargement Profil ==
+
+User -> FE : Accède à la plateforme avec son Token JWT stocké
+activate FE
+FE -> BE : GET /api/users/me (Valider la session avec Header Authorization)
+activate BE
+BE -> BE : Décoder et valider le Token JWT
+BE -> DB : Récupérer les informations de l'utilisateur
+activate DB
+DB --> BE : Infos profil & rôles
+deactivate DB
+BE --> FE : Données utilisateur valides (HTTP 200)
+deactivate BE
+FE --> User : Affiche l'interface personnalisée (Dashboard)
+deactivate FE
+
+== Consultation & Lecture d'une Émission ==
+
+User -> FE : Sélectionne une émission / chaîne et clique sur "Play"
+activate FE
+FE -> BE : GET /api/channels/{id}/status (Vérifier le statut du live)
+activate BE
+BE -> DB : Lire les informations de la chaîne
+activate DB
+DB --> BE : Statut du direct et URL du flux
+deactivate DB
+BE --> FE : Statut en direct et URL du flux
+deactivate BE
+FE -> FE : AudioProvider : Charger et lire le flux audio
+FE --> User : Démarre la lecture (Audio Player visible)
+deactivate FE
+
+== Interactions (Favoris & Commentaires) ==
+
+User -> FE : Clique sur le bouton "Ajouter aux Favoris"
+activate FE
+FE -> BE : POST /api/favorites/{channel_id} (Ajouter la chaîne en favori)
+activate BE
+BE -> DB : Insérer l'association dans la table Favorite
+activate DB
+DB --> BE : Succès de l'enregistrement
+deactivate DB
+BE --> FE : HTTP 200 OK (Favoris mis à jour)
+deactivate BE
+FE --> User : Icône favori mise à jour (coeur coloré) et Toast de succès
+deactivate FE
+
+User -> FE : Rédige et valide un commentaire
+activate FE
+FE -> BE : POST /api/comments (Ajouter un commentaire)
+activate BE
+BE -> DB : Insérer le commentaire (lié à l'utilisateur et à l'émission)
+activate DB
+DB --> BE : Commentaire enregistré avec ID
+deactivate DB
+BE --> FE : HTTP 201 Created (Données du commentaire)
+deactivate BE
+FE --> User : Affiche le commentaire dans la liste en temps réel
+deactivate FE
+
+== Interaction avec l'Assistant LukoIA ==
+
+User -> FE : Demande des recommandations d'écoute à LukoIA
+activate FE
+FE -> BE : POST /api/lukoia/recommendations (Requête IA)
+activate BE
+BE -> AI : Analyser les préférences de l'utilisateur
+activate AI
+AI --> BE : Recommandations d'émissions générées
+deactivate AI
+BE -> DB : Vérifier la disponibilité des émissions recommandées
+activate DB
+DB --> BE : Détails des émissions
+deactivate DB
+BE --> FE : Liste des recommandations (HTTP 200)
+deactivate BE
+FE --> User : LukoIA affiche les suggestions d'écoute personnalisées
+deactivate FE
+
+@enduml

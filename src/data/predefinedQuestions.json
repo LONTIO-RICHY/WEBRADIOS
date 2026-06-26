@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "text": "Comment créer un streaming en direct ?",
+    "category": "Créateur"
+  },
+  {
+    "id": 2,
+    "text": "Comment créer une chaîne sur LUKOLIVE ?",
+    "category": "Créateur"
+  },
+  {
+    "id": 3,
+    "text": "Comment ajouter des émissions à ma bibliothèque ?",
+    "category": "Utilisateur"
+  },
+  {
+    "id": 4,
+    "text": "Quels sont les meilleurs conseils pour animer mon émission ?",
+    "category": "Créateur"
+  },
+  {
+    "id": 5,
+    "text": "Comment écouter une émission en différé ?",
+    "category": "Utilisateur"
+  }
+]

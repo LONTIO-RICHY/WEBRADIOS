@@ -32,6 +32,8 @@ import ChannelDashboard from "./components/ChannelDashboard";
 import MyLibrary from "./components/MyLibrary";
 import Footer from "./components/Footer";
 import PlanningPublic from "./components/PlanningPublic";
+import AiAssistant from "./components/AiAssistant";
+
 
 function App() {
   return (
@@ -65,6 +67,8 @@ function App() {
           </main>
           
           <Footer />
+          
+          <AiAssistant />
           
           <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pointer-events-none">
             <div className="max-w-4xl mx-auto pointer-events-auto">
